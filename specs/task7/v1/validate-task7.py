@@ -298,7 +298,7 @@ def main() -> int:
                     'version': {'type': 'string'},
                     'required_workflows': {'type': 'array', 'items': {'type': 'string'}},
                     'required_commands': {'type': 'array', 'items': {'type': 'string'}},
-                    'fail_conditions': {'type': 'array', 'items': {'type': 'string'}}
+                    'fail_conditions': {'type': 'object'}
                 },
                 'additionalProperties': True
             },
@@ -306,6 +306,23 @@ def main() -> int:
             'S8-5 policy-as-code-ci-requirements',
             errors,
         )
+        _require_non_empty_array(ci.get('required_workflows'), 'S8-5 required_workflows', errors)
+        _require_non_empty_array(ci.get('required_commands'), 'S8-5 required_commands', errors)
+        for key in ('required_workflows', 'required_commands'):
+            rows = ci.get(key)
+            if isinstance(rows, list):
+                for idx, row in enumerate(rows, start=1):
+                    if not isinstance(row, str) or not row.strip():
+                        errors.append(f'S8-5 {key}[{idx}] must be non-empty string')
+        fail_conditions = ci.get('fail_conditions')
+        if not isinstance(fail_conditions, dict) or len(fail_conditions) == 0:
+            errors.append('S8-5 fail_conditions must be a non-empty object')
+        else:
+            for flag, value in fail_conditions.items():
+                if not isinstance(flag, str) or not flag.strip():
+                    errors.append('S8-5 fail_conditions keys must be non-empty strings')
+                if not isinstance(value, bool):
+                    errors.append(f'S8-5 fail_conditions.{flag} must be boolean')
 
         # S8-6 fail-closed checks: explicit version pin + no additional properties + non-empty required values.
         for name, doc in (
@@ -357,7 +374,15 @@ def main() -> int:
         _require_non_empty_array(replay.get('required_artifacts'), 'S8-6 replayability.required_artifacts', errors)
         _require_non_empty_array(ci.get('required_workflows'), 'S8-6 ci.required_workflows', errors)
         _require_non_empty_array(ci.get('required_commands'), 'S8-6 ci.required_commands', errors)
-        _require_non_empty_array(ci.get('fail_conditions'), 'S8-6 ci.fail_conditions', errors)
+        ci_fail_conditions = ci.get('fail_conditions')
+        if not isinstance(ci_fail_conditions, dict) or len(ci_fail_conditions) == 0:
+            errors.append('S8-6 ci.fail_conditions must be a non-empty object')
+        else:
+            for flag, value in ci_fail_conditions.items():
+                if not isinstance(flag, str) or not flag.strip():
+                    errors.append('S8-6 ci.fail_conditions keys must be non-empty strings')
+                if not isinstance(value, bool):
+                    errors.append(f'S8-6 ci.fail_conditions.{flag} must be boolean')
 
         # Nested strictness for core objects.
         _enforce_no_additional_properties(

@@ -10,9 +10,11 @@
     "python3 specs/task7/v1/validate-task7.py",
     "zsh tools/run_all_gates.sh"
   ],
-  "fail_conditions": [
-    "missing_required_workflow",
-    "missing_required_command",
-    "nonzero_validator_exit"
-  ]
+  "fail_conditions": {
+    "any_validator_nonzero": true,
+    "missing_required_workflow": true,
+    "missing_required_command": true,
+    "golden_path_failure": true,
+    "schema_validation_failure": true
+  }
 }
