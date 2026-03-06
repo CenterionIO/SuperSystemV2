@@ -1,0 +1,25 @@
+{
+  "version": "v1",
+  "modes": {
+    "chat": {
+      "workflow_classes": ["research_only"],
+      "default_autonomy_mode": "approve_final",
+      "entry_state": "research"
+    },
+    "build": {
+      "workflow_classes": ["code_change", "mcp_tool", "ui_change", "ops_fix", "transcription"],
+      "default_autonomy_mode": "approve_final",
+      "entry_state": "planning"
+    },
+    "research_build": {
+      "workflow_classes": ["code_change", "mcp_tool", "ui_change", "ops_fix"],
+      "default_autonomy_mode": "approve_each",
+      "entry_state": "research"
+    }
+  },
+  "mode_selection_rules": [
+    "if request asks only for analysis/synthesis with no code change -> chat",
+    "if request implies direct implementation -> build",
+    "if request requires investigation before implementation -> research_build"
+  ]
+}

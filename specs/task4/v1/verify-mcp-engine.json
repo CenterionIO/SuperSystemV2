@@ -1,0 +1,42 @@
+{
+  "version": "v1",
+  "supported_check_types": [
+    "acceptance_criteria",
+    "plan_build_alignment",
+    "research_plan_alignment",
+    "permissions_scope",
+    "evidence_integrity",
+    "freshness"
+  ],
+  "scoring_algorithm": {
+    "steps": [
+      {"name": "validate_inputs"},
+      {"name": "resolve_evidence"},
+      {"name": "select_plugins"},
+      {"name": "execute_plugins"},
+      {"name": "evaluate_criteria"},
+      {"name": "compute_overall_status"},
+      {"name": "produce_artifact"}
+    ]
+  },
+  "fail_closed_enforcement": {
+    "rules": [
+      "missing required check -> blocked",
+      "plugin error/timeout -> blocked",
+      "warn on required check without exception artifact -> blocked"
+    ]
+  },
+  "overall_status_aggregation": {
+    "precedence": ["blocked", "fail", "warn", "pass"],
+    "rules": [
+      "if any blocked then blocked",
+      "else if any fail then fail",
+      "else if any warn then warn",
+      "else pass"
+    ]
+  },
+  "artifact_hash_computation": {
+    "algorithm": "sha256",
+    "scope": "VerificationArtifact canonical JSON"
+  }
+}

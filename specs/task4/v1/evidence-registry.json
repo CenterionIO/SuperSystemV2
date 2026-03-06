@@ -1,0 +1,27 @@
+{
+  "version": "v1",
+  "id_format": "ev_{source}_{sha256_12}",
+  "path_format": "runtime/verification/{correlation_id}/{evidence_id}.json",
+  "hash_algorithm": "sha256",
+  "retention_policy": {
+    "immutability": true,
+    "min_retention_days": 30
+  },
+  "evidence_types": [
+    "api_trace",
+    "artifact_hash",
+    "command_log",
+    "diff",
+    "health_check",
+    "runbook_log",
+    "screenshot",
+    "source_ref",
+    "test_log",
+    "timestamped_lookup",
+    "transcript_file"
+  ],
+  "resolution": {
+    "requires_existing_id": true,
+    "missing_id_behavior": "blocked"
+  }
+}

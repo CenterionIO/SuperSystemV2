@@ -1,0 +1,30 @@
+{
+  "version": "v1",
+  "max_iterations_per_phase": {
+    "research": 3,
+    "planning": 5,
+    "implementation": 8,
+    "verifying": 5,
+    "build_rework": 3,
+    "research_rework": 2,
+    "plan_rework": 2
+  },
+  "max_tool_calls_per_phase": {
+    "research": 50,
+    "planning": 25,
+    "implementation": 120,
+    "verifying": 80
+  },
+  "retry_caps_by_error_type": {
+    "verification_fail": 2,
+    "plan_blocker": 3,
+    "workflow_error": 3,
+    "platform_error": 3
+  },
+  "heartbeat_policy": {
+    "interval_seconds": 30,
+    "stall_threshold_missed_beats": 3,
+    "stall_action": "blocked_platform",
+    "applies_to_states": ["research", "planning", "implementation", "verifying", "build_rework", "blocked_evidence", "blocked_platform"]
+  }
+}

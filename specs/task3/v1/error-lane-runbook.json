@@ -1,0 +1,31 @@
+{
+  "version": "v1",
+  "error_classification": {
+    "rules": [
+      {"match": "tool/dispatch policy violations", "classification": "workflow_error"},
+      {"match": "provider timeout, infra outage", "classification": "platform_error"}
+    ]
+  },
+  "workflow_error_handling": {
+    "retry_cap": 3,
+    "exceeded_action": "escalation"
+  },
+  "platform_error_handling": {
+    "auto_route_to": "blocked_platform",
+    "recovery_owner": "PlatformRecovery"
+  },
+  "recovery_runbook": {
+    "actions": [
+      {"action_id": "health_probe", "max_attempts": 3, "timeout_ms": 10000},
+      {"action_id": "restart_local_components", "max_attempts": 2, "timeout_ms": 30000}
+    ],
+    "bounds": {
+      "max_total_recovery_attempts": 5,
+      "max_total_recovery_time_ms": 180000
+    }
+  },
+  "health_verification": {
+    "checks": ["service reachable", "state store writable"],
+    "pass_condition": "all checks pass"
+  }
+}

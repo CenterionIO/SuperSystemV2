@@ -1,0 +1,39 @@
+{
+  "version": "v1",
+  "enforcement_points": {
+    "tool_allowlist": {
+      "intercept_at": "tool_dispatch_precheck",
+      "check_logic": ["deny tool if not in role allowlist"],
+      "on_deny": {"action": "deny", "log": true, "evidence": "tool_denied"}
+    },
+    "path_scope_guard": {
+      "intercept_at": "filesystem_access_precheck",
+      "check_logic": ["deny path access outside role path_scope"],
+      "on_deny": {"action": "deny", "log": true, "evidence": "path_denied"}
+    },
+    "network_scope_guard": {
+      "intercept_at": "network_access_precheck",
+      "check_logic": ["deny network target outside allow labels"],
+      "on_deny": {"action": "deny", "log": true, "evidence": "network_denied"}
+    },
+    "runtime_guard": {
+      "intercept_at": "state_transition_precheck",
+      "check_logic": ["reject unknown state transitions", "enforce loop and retry caps"],
+      "on_deny": {"action": "deny", "log": true, "evidence": "transition_denied"}
+    },
+    "verifier_gate": {
+      "intercept_at": "post_artifact_validation",
+      "check_logic": ["enforce ownership and boundary conformance"],
+      "on_violation": {"action": "blocked", "log": true, "evidence": "gate_violation"}
+    },
+    "policy_engine": {
+      "intercept_at": "verification_outcome_resolution",
+      "check_logic": ["apply fail-closed", "resolve deterministic route"],
+      "on_deny": {"action": "blocked", "log": true, "evidence": "policy_denied"}
+    }
+  },
+  "adapter_invariants": [
+    "all enforcement prechecks run before side effects",
+    "denied actions emit evidence"
+  ]
+}

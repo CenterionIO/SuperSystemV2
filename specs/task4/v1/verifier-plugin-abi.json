@@ -1,0 +1,33 @@
+{
+  "version": "v1",
+  "input_schema": {
+    "required_fields": ["invocation_id", "correlation_id", "criteria_id", "check_type", "evidence_refs"]
+  },
+  "output_schema": {
+    "required_fields": ["invocation_id", "correlation_id", "criteria_id", "status", "rationale"],
+    "status_enum": ["pass", "warn", "fail", "blocked", "error"]
+  },
+  "timeout_policy": {
+    "default_timeout_ms": 30000,
+    "max_timeout_ms": 120000
+  },
+  "resource_policy": {
+    "max_memory_mb": 512,
+    "max_cpu_seconds": 60
+  },
+  "capability_flags": {
+    "requires_network": true,
+    "requires_web": true,
+    "requires_fs_read": true,
+    "requires_process_exec": false
+  },
+  "error_handling": {
+    "plugin_errors": [
+      {"error_type": "timeout", "engine_response": "blocked"},
+      {"error_type": "exception", "engine_response": "blocked"}
+    ]
+  },
+  "lifecycle": {
+    "phases": ["load", "execute", "teardown"]
+  }
+}

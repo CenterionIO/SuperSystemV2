@@ -1,0 +1,38 @@
+{
+  "version": "v1",
+  "gates": {
+    "G-001": {
+      "fires_at_state": "research",
+      "required_artifacts": [
+        {"type": "ResearchReport", "source": "Research"}
+      ],
+      "checks": ["research_plan_alignment", "freshness"],
+      "routing": {"pass": "planning", "fail": "research_rework", "blocked": "blocked_evidence"},
+      "owner": "VerifyMCP"
+    },
+    "G-002": {
+      "fires_at_state": "planning",
+      "required_artifacts": [
+        {"type": "ExecutionPlan", "source": "Planner"}
+      ],
+      "checks": ["acceptance_criteria", "permissions_scope"],
+      "routing": {"pass": "implementation", "fail": "plan_rework", "blocked": "blocked_evidence"},
+      "owner": "VerifyMCP"
+    },
+    "G-003": {
+      "fires_at_state": "verifying",
+      "required_artifacts": [
+        {"type": "ExecutionPlan", "source": "Planner"},
+        {"type": "BuildReport", "source": "Builder"}
+      ],
+      "checks": ["plan_build_alignment", "evidence_integrity", "acceptance_criteria"],
+      "routing": {"pass": "completed", "fail": "build_rework", "blocked": "blocked_evidence"},
+      "owner": "VerifyMCP"
+    }
+  },
+  "gate_invariants": [
+    "required artifacts must exist before gate execution",
+    "missing required checks fail-closed to blocked",
+    "gate routing must be deterministic"
+  ]
+}
