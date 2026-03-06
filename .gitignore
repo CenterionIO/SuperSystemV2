@@ -15,5 +15,9 @@ tmp/
 # Node
 node_modules/
 
-# Runtime outputs
-runtime/
+# Runtime outputs (keep runtime source tracked)
+runtime/session/
+runtime/state/
+runtime/builds/
+runtime/verification/
+runtime/recovery/

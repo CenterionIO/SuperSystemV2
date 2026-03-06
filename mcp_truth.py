@@ -29,12 +29,21 @@ from mcp_file_checker import (
 
 # Import witness search (same directory)
 from mcp_witness import search_evidence as _w_search_evidence
+from runtime.permissions_guard import (
+    PermissionError as _PermissionError,
+    ensure_network_allowed as _ensure_network_allowed,
+    ensure_path_allowed as _ensure_path_allowed,
+    ensure_tool_allowed as _ensure_tool_allowed,
+)
+from runtime.policy_engine import load_policy_bundle as _load_policy_bundle
 
 POLICY_PATH = Path(__file__).parent / "policies" / "truth.md"
 MODEL = "claude-haiku-4-5-20251001"
 MAX_TOOL_ROUNDS = 8  # Max tool-use rounds per verification
 
 server = FastMCP("mcp-truth")
+_POLICY_BUNDLE = _load_policy_bundle(Path(__file__).resolve().parent)
+_VERIFY_ROLE = "VerifyMCP"
 
 # --- Tool definitions for Haiku's tool_use ---
 
@@ -191,6 +200,26 @@ TOOL_DISPATCH = {
 }
 
 
+def _dispatch_with_permissions(tool_name: str, tool_input: dict) -> str:
+    _ensure_tool_allowed(_POLICY_BUNDLE, _VERIFY_ROLE, tool_name)
+
+    if tool_name in {"file_exists", "file_contains", "file_info", "dir_structure"}:
+        path = tool_input.get("path")
+        if not isinstance(path, str) or not path:
+            raise _PermissionError(f"{tool_name} requires non-empty 'path'")
+        _ensure_path_allowed(_POLICY_BUNDLE, _VERIFY_ROLE, path, "read")
+
+    if tool_name == "web_search":
+        _ensure_network_allowed(_POLICY_BUNDLE, _VERIFY_ROLE, "approved_sources")
+
+    handler = TOOL_DISPATCH.get(tool_name)
+    if handler is None:
+        raise _PermissionError(f"unknown tool: {tool_name}")
+
+    result = handler(tool_input)
+    return result if isinstance(result, str) else json.dumps(result)
+
+
 def _load_policy() -> str:
     return POLICY_PATH.read_text()
 
@@ -267,18 +296,15 @@ def _call_verifier(question: str, assistant_output: str) -> dict:
                 if block.type == "tool_use":
                     tool_name = block.name
                     tool_input = block.input
-                    if tool_name in TOOL_DISPATCH:
-                        try:
-                            result = TOOL_DISPATCH[tool_name](tool_input)
-                            tools_used.append(f"{tool_name}({json.dumps(tool_input)[:80]})")
-                        except Exception as e:
-                            result = json.dumps({"error": str(e)})
-                    else:
-                        result = json.dumps({"error": f"unknown tool: {tool_name}"})
+                    try:
+                        result = _dispatch_with_permissions(tool_name, tool_input)
+                        tools_used.append(f"{tool_name}({json.dumps(tool_input)[:80]})")
+                    except Exception as e:
+                        result = json.dumps({"error": str(e)})
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": block.id,
-                        "content": result if isinstance(result, str) else json.dumps(result),
+                        "content": result,
                     })
 
             assistant_content = []
@@ -313,20 +339,16 @@ def _call_verifier(question: str, assistant_output: str) -> dict:
                 tool_id = block.id
 
                 # Execute the tool
-                if tool_name in TOOL_DISPATCH:
-                    try:
-                        result = TOOL_DISPATCH[tool_name](tool_input)
-                        # Result is already a JSON string from the checker
-                        tools_used.append(f"{tool_name}({json.dumps(tool_input)[:80]})")
-                    except Exception as e:
-                        result = json.dumps({"error": str(e)})
-                else:
-                    result = json.dumps({"error": f"unknown tool: {tool_name}"})
+                try:
+                    result = _dispatch_with_permissions(tool_name, tool_input)
+                    tools_used.append(f"{tool_name}({json.dumps(tool_input)[:80]})")
+                except Exception as e:
+                    result = json.dumps({"error": str(e)})
 
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": tool_id,
-                    "content": result if isinstance(result, str) else json.dumps(result),
+                    "content": result,
                 })
 
         # Append assistant response + tool results to messages

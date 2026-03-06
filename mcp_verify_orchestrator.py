@@ -10,12 +10,25 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 from mcp_file_checker import file_exists as _file_exists
 from mcp_witness import search_evidence as _search_evidence
+from runtime.permissions_guard import (
+    PermissionError as _PermissionError,
+    ensure_path_allowed as _ensure_path_allowed,
+    ensure_tool_allowed as _ensure_tool_allowed,
+)
+from runtime.policy_engine import (
+    apply_fail_closed as _apply_fail_closed,
+    load_policy_bundle as _load_policy_bundle,
+    next_state_for_verification as _next_state_for_verification,
+)
 
 server = FastMCP("mcp-verify-orchestrator")
+_POLICY_BUNDLE = _load_policy_bundle(Path(__file__).resolve().parent)
+_VERIFY_ROLE = "VerifyMCP"
 
 
 def _now_iso() -> str:
@@ -126,6 +139,8 @@ def _truth_v1(job_id: str, request: dict) -> dict:
     path_unverified = 0
     for path in mentioned_paths:
         try:
+            _ensure_tool_allowed(_POLICY_BUNDLE, _VERIFY_ROLE, "file_exists")
+            _ensure_path_allowed(_POLICY_BUNDLE, _VERIFY_ROLE, path, "read")
             raw = _file_exists(path)
             tool_trace.append({"tool": "file_exists", "args": {"path": path}, "status": "ok"})
             parsed = json.loads(raw)
@@ -151,6 +166,20 @@ def _truth_v1(job_id: str, request: dict) -> dict:
                         "evidence_refs": [evidence[-1]["id"]],
                     }
                 )
+        except _PermissionError as exc:
+            path_unverified += 1
+            tool_trace.append(
+                {"tool": "file_exists", "args": {"path": path}, "status": "blocked", "error": str(exc)}
+            )
+            findings.append(
+                {
+                    "severity": "high",
+                    "type": "permission_denied",
+                    "claim": path,
+                    "reason": str(exc),
+                    "evidence_refs": [],
+                }
+            )
         except Exception as exc:
             tool_trace.append(
                 {"tool": "file_exists", "args": {"path": path}, "status": "error", "error": str(exc)}
@@ -189,6 +218,7 @@ def _truth_v1(job_id: str, request: dict) -> dict:
     if keyword_terms:
         keyword_query = " ".join(keyword_terms)
         try:
+            _ensure_tool_allowed(_POLICY_BUNDLE, _VERIFY_ROLE, "search_evidence")
             raw = _search_evidence(keyword_query, "any", 0, 999999, 3)
             tool_trace.append({"tool": "search_evidence", "args": {"keywords": keyword_query}, "status": "ok"})
             parsed = json.loads(raw)
@@ -207,6 +237,17 @@ def _truth_v1(job_id: str, request: dict) -> dict:
                     "check_id": "conversation_evidence_probe",
                     "status": "pass",
                     "reason": f"witness searched with {match_count} matches",
+                }
+            )
+        except _PermissionError as exc:
+            tool_trace.append(
+                {"tool": "search_evidence", "args": {"keywords": keyword_query}, "status": "blocked", "error": str(exc)}
+            )
+            checks_run.append(
+                {
+                    "check_id": "conversation_evidence_probe",
+                    "status": "blocked",
+                    "reason": f"permissions denied: {exc}",
                 }
             )
         except Exception as exc:
@@ -279,22 +320,25 @@ def _truth_v1(job_id: str, request: dict) -> dict:
     if "blocked" in statuses:
         overall_status = "blocked"
     elif "fail" in statuses:
-        # Conversation truth checks do not hard-fail in rebuild mode.
-        # Any deterministic mismatch is surfaced as unverifiable details.
-        overall_status = "unverified"
-    elif "unverified" in statuses:
-        overall_status = "unverified"
-    elif "warn" in statuses:
-        overall_status = "unverified"
+        overall_status = "fail"
+    elif "warn" in statuses or "unverified" in statuses:
+        overall_status = "warn"
     else:
         overall_status = "pass"
 
+    # Stage 3: enforce canonical fail-closed behavior for required truth checks.
+    overall_status = _apply_fail_closed(
+        _POLICY_BUNDLE,
+        overall_status,
+        required=True,
+        has_exception_artifact=False,
+    )
+
     summary = {
         "pass": "Truth v2 passed: deterministic checks succeeded.",
-        "warn": "Truth v2 unverified: non-blocking verification issues.",
-        "unverified": "Truth v2 unverified: one or more claims could not be verified.",
+        "warn": "Truth v2 warning: non-blocking verification issues detected.",
         "blocked": "Truth v2 blocked: required verification could not complete.",
-        "fail": "Truth v2 unverified: unverifiable claims detected.",
+        "fail": "Truth v2 failed: one or more deterministic checks failed.",
     }[overall_status]
 
     if path_unverified:
@@ -316,6 +360,53 @@ def _truth_v1(job_id: str, request: dict) -> dict:
         "policy_version": "v1",
         "timestamp": _now_iso(),
     }
+
+
+@server.tool()
+def runtime_route_preview(request_json: str) -> str:
+    """Preview Stage 3 routing decision using policy/v1 (deterministic, side-effect free).
+
+    request_json:
+      {
+        "workflow_class": "code_change|mcp_tool|research_only|transcription|ui_change|ops_fix",
+        "verdict": "pass|warn|fail|blocked|unverified",
+        "required": true|false,
+        "has_exception_artifact": true|false
+      }
+    """
+    try:
+        request = json.loads(request_json)
+    except json.JSONDecodeError as exc:
+        return json.dumps({"status": "blocked", "error": f"Invalid request_json: {exc}"}, indent=2)
+
+    workflow_class = str(request.get("workflow_class", "")).strip()
+    verdict = str(request.get("verdict", "")).strip()
+    required = bool(request.get("required", True))
+    has_exception_artifact = bool(request.get("has_exception_artifact", False))
+
+    try:
+        effective_verdict = _apply_fail_closed(
+            _POLICY_BUNDLE,
+            verdict,
+            required=required,
+            has_exception_artifact=has_exception_artifact,
+        )
+        next_state = _next_state_for_verification(_POLICY_BUNDLE, workflow_class, effective_verdict)
+    except Exception as exc:
+        return json.dumps({"status": "blocked", "error": str(exc)}, indent=2)
+
+    return json.dumps(
+        {
+            "status": "pass",
+            "workflow_class": workflow_class,
+            "input_verdict": verdict,
+            "effective_verdict": effective_verdict,
+            "next_state": next_state,
+            "policy_version": "v1",
+            "timestamp": _now_iso(),
+        },
+        indent=2,
+    )
 
 
 @server.tool()
