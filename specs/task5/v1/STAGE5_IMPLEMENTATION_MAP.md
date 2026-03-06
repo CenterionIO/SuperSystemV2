@@ -1,4 +1,4 @@
-# Stage 5 Implementation Map (Verification Backbone Execution)
+# Stage 5 Implementation Map (Golden Paths + Verification Backbone Execution)
 
 Status: in progress
 
@@ -8,6 +8,7 @@ Status: in progress
 2. Route non-truth verification domains through a deterministic scoring engine.
 3. Enforce fail-closed semantics for required checks at execution time.
 4. Emit canonical verification artifacts suitable for downstream workflow routing.
+5. Run golden-path conformance flows (`code_change`, `mcp_tool`) with deterministic outputs.
 
 ## Deliverables
 

@@ -317,6 +317,14 @@ class VerificationBackbone:
                     verification_artifact=verification_artifact,
                     trace_rows=[
                         {
+                            "event": "verify_start",
+                            "job_id": job_id,
+                            "domain": domain,
+                            "workflow_class": workflow_class,
+                            "timestamp": self._now_iso(),
+                        },
+                        {
+                            "event": "verify_complete",
                             "job_id": job_id,
                             "domain": domain,
                             "overall_status": overall_status,
