@@ -1,0 +1,32 @@
+{
+  "version": "v1",
+  "retention_days": 30,
+  "immutable_artifacts": [
+    "VerificationArtifact.json",
+    "manifest.json",
+    "trace.jsonl"
+  ],
+  "redaction_levels": [
+    "none",
+    "mask",
+    "hash",
+    "drop"
+  ],
+  "pii_field_patterns": [
+    "request.subject.email",
+    "request.subject.phone",
+    "request.subject.user_name"
+  ],
+  "secrets_field_patterns": [
+    "request.subject.api_key",
+    "request.subject.access_token",
+    "request.subject.password"
+  ],
+  "audit_log_scope": [
+    "verify_start",
+    "verify_complete",
+    "escalation_prompt",
+    "escalation_response",
+    "proof_run"
+  ]
+}

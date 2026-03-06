@@ -94,8 +94,10 @@ def main() -> int:
         'escalation-ui-contract.json',
         'autonomy-modes-policy.json',
         'status-view-contract.json',
+        'security-retention-redaction-policy.json',
         'escalation-ui-contract.schema.json',
         'autonomy-modes-policy.schema.json',
+        'security-retention-redaction-policy.schema.json',
         'validate-task6.py',
     ]
     for name in required:
@@ -105,9 +107,11 @@ def main() -> int:
     if not errors:
         escalation_schema = _load(TASK6_DIR / 'escalation-ui-contract.schema.json')
         autonomy_schema = _load(TASK6_DIR / 'autonomy-modes-policy.schema.json')
+        secops_schema = _load(TASK6_DIR / 'security-retention-redaction-policy.schema.json')
         escalation_doc = _load(TASK6_DIR / 'escalation-ui-contract.json')
         autonomy_doc = _load(TASK6_DIR / 'autonomy-modes-policy.json')
         status_view_schema = _load(TASK6_DIR / 'status-view-contract.json')
+        secops_doc = _load(TASK6_DIR / 'security-retention-redaction-policy.json')
 
         _validate_json_schema_subset(
             escalation_doc,
@@ -124,6 +128,13 @@ def main() -> int:
             errors,
         )
         _validate_json_schema_subset(
+            secops_doc,
+            secops_schema,
+            secops_schema.get('$defs', {}),
+            'S6-4 security-retention-redaction-policy',
+            errors,
+        )
+        _validate_json_schema_subset(
             {
                 'correlation_id': 'corr-example',
                 'current_state': 'build_review',
@@ -134,7 +145,7 @@ def main() -> int:
             },
             status_view_schema,
             status_view_schema.get('$defs', {}),
-            'S6-4 status-view-contract',
+            'S6-5 status-view-contract',
             errors,
         )
         _validate_json_schema_subset(
@@ -148,35 +159,35 @@ def main() -> int:
             },
             status_view_schema,
             status_view_schema.get('$defs', {}),
-            'S6-4 status-view-contract',
+            'S6-5 status-view-contract',
             errors,
         )
         status_enum = (
             (status_view_schema.get('properties') or {}).get('run_status') or {}
         ).get('enum', [])
         if sorted(status_enum) != ['blocked', 'running']:
-            errors.append('S6-4 status-view-contract run_status enum must be [running, blocked]')
+            errors.append('S6-5 status-view-contract run_status enum must be [running, blocked]')
 
         required_modes = ['approve_each', 'approve_final', 'full_auto']
         for mode in required_modes:
             mode_doc = (autonomy_doc.get('modes') or {}).get(mode)
             if not isinstance(mode_doc, dict):
-                errors.append(f'S6-4 missing autonomy mode: {mode}')
+                errors.append(f'S6-6 missing autonomy mode: {mode}')
                 continue
             gate = mode_doc.get('gate_application') or {}
             for review_gate in ('research_review', 'plan_review', 'build_review'):
                 if gate.get(review_gate) not in ('auto', 'manual'):
-                    errors.append(f'S6-4 {mode}.{review_gate} must be auto|manual')
+                    errors.append(f'S6-6 {mode}.{review_gate} must be auto|manual')
 
         ui_actions = set((escalation_doc.get('response') or {}).get('actions', []))
         for mode in required_modes:
             actions = ((autonomy_doc.get('modes') or {}).get(mode) or {}).get('escalation_actions', [])
             for action in actions:
                 if action not in ui_actions:
-                    errors.append(f'S6-5 action mismatch: {mode} references unknown escalation action {action}')
+                    errors.append(f'S6-6 action mismatch: {mode} references unknown escalation action {action}')
 
         if escalation_doc.get('version') != 'v1' or autonomy_doc.get('version') != 'v1':
-            errors.append('S6-6 fail-closed: contract version must be v1')
+            errors.append('S6-7 fail-closed: contract version must be v1')
 
     if errors:
         print('Stage 6 gates: FAIL')
@@ -188,9 +199,10 @@ def main() -> int:
     print('- S6-1: presence gate')
     print('- S6-2: escalation contract schema gate')
     print('- S6-3: autonomy policy schema gate')
-    print('- S6-4: status view contract gate')
-    print('- S6-5: cross-contract consistency gate')
-    print('- S6-6: CI fail-closed gate')
+    print('- S6-4: security/retention/redaction policy schema gate')
+    print('- S6-5: status view contract gate')
+    print('- S6-6: cross-contract consistency gate')
+    print('- S6-7: CI fail-closed gate')
     return 0
 
 
