@@ -19,6 +19,7 @@ from runtime.builder_adapter import simulate_build
 from runtime.orchestrator_api import runtime_create_run, runtime_get_run, runtime_step
 from runtime.planner_adapter import create_execution_plan
 from runtime.policy_engine import load_policy_bundle
+from runtime.proof_surface import ProofError, proof_evidence, proof_run
 from runtime.verification_backbone import VerificationBackbone
 
 
@@ -159,6 +160,26 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0 if result.get('overall_status') in {'pass', 'warn'} else 1
 
 
+def cmd_proof_run(args: argparse.Namespace) -> int:
+    try:
+        result = proof_run(args.out)
+    except ProofError as exc:
+        print(json.dumps({'error': str(exc)}, indent=2))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0 if result.get('pass') else 1
+
+
+def cmd_proof_evidence(args: argparse.Namespace) -> int:
+    try:
+        result = proof_evidence(args.out, args.evidence_id)
+    except ProofError as exc:
+        print(json.dumps({'error': str(exc)}, indent=2))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0 if result.get('pass') else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog='supersystemv2')
     sub = p.add_subparsers(dest='cmd', required=True)
@@ -185,6 +206,16 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser('verify')
     verify.add_argument('--request', required=True)
     verify.set_defaults(func=cmd_verify)
+
+    proof = sub.add_parser('proof')
+    proof_sub = proof.add_subparsers(dest='proof_cmd', required=True)
+    prun = proof_sub.add_parser('run')
+    prun.add_argument('--out', required=True)
+    prun.set_defaults(func=cmd_proof_run)
+    pevidence = proof_sub.add_parser('evidence')
+    pevidence.add_argument('--out', required=True)
+    pevidence.add_argument('--evidence_id', required=True)
+    pevidence.set_defaults(func=cmd_proof_evidence)
 
     return p
 

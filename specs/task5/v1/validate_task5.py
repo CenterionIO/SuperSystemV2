@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -116,6 +117,7 @@ def _validate_artifact_bundle(
         'trace.jsonl',
         'policy_snapshot.json',
         'request.json',
+        'manifest.json',
     ]
     missing = [name for name in required_files if not (out_dir / name).exists()]
     if missing:
@@ -126,6 +128,7 @@ def _validate_artifact_bundle(
     build_report = _load(out_dir / 'BuildReport.json')
     verification_artifact = _load(out_dir / 'VerificationArtifact.json')
     verify_request = _load(out_dir / 'request.json')
+    manifest = _load(out_dir / 'manifest.json')
 
     _validate_json_schema_subset(plan, execution_plan_schema, f'{context}.ExecutionPlan', errors)
     _validate_json_schema_subset(build_report, build_schema, f'{context}.BuildReport', errors)
@@ -202,6 +205,33 @@ def _validate_artifact_bundle(
         for ref in refs:
             if str(ref) not in evidence_ids:
                 errors.append(f'{context}: check {check_id} references unknown evidence_id {ref}')
+
+    # Manifest checks: required files listed + hash/size integrity.
+    manifest_required = set(str(v) for v in manifest.get('required_artifacts', []))
+    if not set(required_files[:-1]).issubset(manifest_required):
+        errors.append(f'{context}: manifest missing required_artifacts entries')
+    manifest_artifacts = manifest.get('artifacts', [])
+    if not isinstance(manifest_artifacts, list):
+        errors.append(f'{context}: manifest artifacts is not a list')
+    for row in manifest_artifacts if isinstance(manifest_artifacts, list) else []:
+        if not isinstance(row, dict):
+            errors.append(f'{context}: manifest artifact row must be object')
+            continue
+        rel = str(row.get('path', ''))
+        sha = str(row.get('sha256', ''))
+        size = row.get('size_bytes')
+        if not rel:
+            errors.append(f'{context}: manifest artifact missing path')
+            continue
+        file_path = out_dir / rel
+        if not file_path.exists():
+            errors.append(f'{context}: manifest path does not exist {rel}')
+            continue
+        digest = hashlib.sha256(file_path.read_bytes()).hexdigest()
+        if digest != sha:
+            errors.append(f'{context}: manifest hash mismatch for {rel}')
+        if not isinstance(size, int) or size != int(file_path.stat().st_size):
+            errors.append(f'{context}: manifest size mismatch for {rel}')
 
     # Trace checks.
     trace_lines = [line for line in (out_dir / 'trace.jsonl').read_text().splitlines() if line.strip()]

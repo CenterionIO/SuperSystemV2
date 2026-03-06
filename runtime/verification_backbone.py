@@ -232,6 +232,17 @@ class VerificationBackbone:
 
             plugin_result = self._run_plugin_with_timeout(check_type, item)
             bad_refs = self._validate_evidence_refs(refs)
+            unresolved_refs: list[str] = []
+            for ref in refs:
+                meta = artifact_lookup.get(ref)
+                if not meta:
+                    unresolved_refs.append(ref)
+                    continue
+                has_path = bool(str(meta.get("canonical_path", "")).strip())
+                has_hash = bool(str(meta.get("sha256", "")).strip())
+                has_size = int(meta.get("size_bytes", 0)) > 0
+                if not (has_path and has_hash and has_size):
+                    unresolved_refs.append(ref)
             status = normalize_status(plugin_result.get("status", input_status))
             if bad_refs:
                 status = "blocked"
@@ -242,6 +253,17 @@ class VerificationBackbone:
                         "claim": check_id,
                         "reason": f"Invalid evidence refs: {bad_refs}",
                         "evidence_refs": [],
+                    }
+                )
+            if unresolved_refs:
+                status = "blocked"
+                findings.append(
+                    {
+                        "severity": "high",
+                        "type": "evidence_linkage_invalid",
+                        "claim": check_id,
+                        "reason": f"Evidence linkage invalid for refs: {unresolved_refs}",
+                        "evidence_refs": refs,
                     }
                 )
 

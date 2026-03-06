@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 
@@ -14,13 +15,35 @@ from runtime.policy_engine import load_policy_bundle
 from runtime.verification_backbone import VerificationBackbone
 
 
+def _write_smoke_artifact(correlation_id: str, name: str, content: str) -> tuple[str, str]:
+    path = ROOT / 'out' / correlation_id / 'inputs' / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    sha = hashlib.sha256(content.encode('utf-8')).hexdigest()
+    rel = str(path.relative_to(ROOT))
+    return rel, sha
+
+
 def _pass_case(backbone: VerificationBackbone) -> None:
+    p1, h1 = _write_smoke_artifact('corr-pass', 'a1.txt', 'smoke_a1')
+    p2, h2 = _write_smoke_artifact('corr-pass', 'a2.txt', 'smoke_a2')
+    p3, h3 = _write_smoke_artifact('corr-pass', 'a3.txt', 'smoke_a3')
+    p4, h4 = _write_smoke_artifact('corr-pass', 'a4.txt', 'smoke_a4')
+    build_report = {
+        'artifacts': [
+            {'evidence_id': 'ev_a1', 'path': p1, 'sha256': h1},
+            {'evidence_id': 'ev_a2', 'path': p2, 'sha256': h2},
+            {'evidence_id': 'ev_a3', 'path': p3, 'sha256': h3},
+            {'evidence_id': 'ev_a4', 'path': p4, 'sha256': h4},
+        ]
+    }
     result = backbone.run(
         job_id='job-pass',
         domain='plan',
         request={
             'workflow_class': 'code_change',
             'correlation_id': 'corr-pass',
+            'build_report': build_report,
             'criteria': [
                 {'check_id': 'c1', 'check_type': 'acceptance_criteria', 'status': 'pass', 'required': True, 'evidence_refs': ['ev_a1']},
                 {'check_id': 'c2', 'check_type': 'plan_build_alignment', 'status': 'pass', 'required': True, 'evidence_refs': ['ev_a2']},

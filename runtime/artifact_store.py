@@ -4,8 +4,17 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Any, Dict, Iterable
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def persist_outputs(
@@ -37,5 +46,34 @@ def persist_outputs(
 
     for idx, row in enumerate(evidence_rows, start=1):
         (evidence_dir / f"evidence_{idx:04d}.json").write_text(json.dumps(row, indent=2) + "\n")
+
+    required = [
+        "ExecutionPlan.json",
+        "BuildReport.json",
+        "VerificationArtifact.json",
+        "trace.jsonl",
+        "policy_snapshot.json",
+        "request.json",
+    ]
+    evidence_paths = sorted(str(path.relative_to(base)) for path in evidence_dir.glob("*.json"))
+    artifacts = []
+    for rel_path in sorted(required + evidence_paths):
+        path = base / rel_path
+        if not path.exists():
+            continue
+        artifacts.append(
+            {
+                "path": rel_path,
+                "sha256": _sha256_file(path),
+                "size_bytes": int(path.stat().st_size),
+            }
+        )
+    manifest = {
+        "schema_version": "v1",
+        "correlation_id": correlation_id,
+        "required_artifacts": required,
+        "artifacts": artifacts,
+    }
+    (base / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
     return base
