@@ -146,17 +146,27 @@ def main() -> int:
             errors,
         )
         semver = versioning.get('semver_policy') if isinstance(versioning.get('semver_policy'), dict) else {}
+        if semver.get('format') != 'major.minor.patch':
+            errors.append('S8-2 semver_policy.format must be "major.minor.patch"')
         _require_non_empty_array(semver.get('breaking_change_triggers'), 'S8-2 semver_policy.breaking_change_triggers', errors)
         _require_non_empty_array(semver.get('minor_change_triggers'), 'S8-2 semver_policy.minor_change_triggers', errors)
         _require_non_empty_array(semver.get('patch_change_triggers'), 'S8-2 semver_policy.patch_change_triggers', errors)
 
         bc = versioning.get('backward_compat_window') if isinstance(versioning.get('backward_compat_window'), dict) else {}
-        if bc.get('unit') not in {'days', 'minor_versions'}:
-            errors.append('S8-2 backward_compat_window.unit must be days|minor_versions')
-        if not isinstance(bc.get('value'), int) or int(bc.get('value', 0)) <= 0:
-            errors.append('S8-2 backward_compat_window.value must be positive integer')
-        if not isinstance(bc.get('deprecation_notice_days'), int):
-            errors.append('S8-2 backward_compat_window.deprecation_notice_days must be integer')
+        if not isinstance(bc.get('duration_days'), int) or bc.get('duration_days', 0) < 1:
+            errors.append('S8-2 backward_compat_window.duration_days must be a positive integer')
+        _require_non_empty_string(bc.get('strategy'), 'S8-2 backward_compat_window.strategy', errors)
+        if not isinstance(bc.get('deprecation_notice_required'), bool):
+            errors.append('S8-2 backward_compat_window.deprecation_notice_required must be boolean')
+
+        ms = versioning.get('migration_strategy') if isinstance(versioning.get('migration_strategy'), dict) else {}
+        _require_non_empty_string(ms.get('approach'), 'S8-2 migration_strategy.approach', errors)
+        if not isinstance(ms.get('rollback_supported'), bool):
+            errors.append('S8-2 migration_strategy.rollback_supported must be boolean')
+        if not isinstance(ms.get('data_migration_required'), bool):
+            errors.append('S8-2 migration_strategy.data_migration_required must be boolean')
+        if not isinstance(ms.get('validation_before_cutover'), bool):
+            errors.append('S8-2 migration_strategy.validation_before_cutover must be boolean')
 
         # b) replayability-spec.json
         replay = _load(replay_path)
@@ -322,19 +332,19 @@ def main() -> int:
         # Nested strictness for core objects.
         _enforce_no_additional_properties(
             versioning.get('semver_policy'),
-            {'breaking_change_triggers', 'minor_change_triggers', 'patch_change_triggers'},
+            {'format', 'breaking_change_triggers', 'minor_change_triggers', 'patch_change_triggers'},
             'S8-6 versioning.semver_policy',
             errors,
         )
         _enforce_no_additional_properties(
             versioning.get('backward_compat_window'),
-            {'unit', 'value', 'deprecation_notice_days'},
+            {'duration_days', 'strategy', 'deprecation_notice_required'},
             'S8-6 versioning.backward_compat_window',
             errors,
         )
         _enforce_no_additional_properties(
             versioning.get('migration_strategy'),
-            {'mode', 'requires_migration_plan', 'rollback_supported'},
+            {'approach', 'rollback_supported', 'data_migration_required', 'validation_before_cutover'},
             'S8-6 versioning.migration_strategy',
             errors,
         )
@@ -357,24 +367,27 @@ def main() -> int:
         )
 
         semver = versioning.get('semver_policy') if isinstance(versioning.get('semver_policy'), dict) else {}
+        if semver.get('format') != 'major.minor.patch':
+            errors.append('S8-6 semver_policy.format must be "major.minor.patch"')
         _require_non_empty_array(semver.get('breaking_change_triggers'), 'S8-6 semver_policy.breaking_change_triggers', errors)
         _require_non_empty_array(semver.get('minor_change_triggers'), 'S8-6 semver_policy.minor_change_triggers', errors)
         _require_non_empty_array(semver.get('patch_change_triggers'), 'S8-6 semver_policy.patch_change_triggers', errors)
 
         bc = versioning.get('backward_compat_window') if isinstance(versioning.get('backward_compat_window'), dict) else {}
-        if bc.get('unit') not in {'days', 'minor_versions'}:
-            errors.append('S8-6 backward_compat_window.unit must be days|minor_versions')
-        if not isinstance(bc.get('value'), int):
-            errors.append('S8-6 backward_compat_window.value must be integer')
-        if not isinstance(bc.get('deprecation_notice_days'), int):
-            errors.append('S8-6 backward_compat_window.deprecation_notice_days must be integer')
+        if not isinstance(bc.get('duration_days'), int) or bc.get('duration_days', 0) < 1:
+            errors.append('S8-6 backward_compat_window.duration_days must be positive integer')
+        _require_non_empty_string(bc.get('strategy'), 'S8-6 backward_compat_window.strategy', errors)
+        if not isinstance(bc.get('deprecation_notice_required'), bool):
+            errors.append('S8-6 backward_compat_window.deprecation_notice_required must be boolean')
 
         mig = versioning.get('migration_strategy') if isinstance(versioning.get('migration_strategy'), dict) else {}
-        _require_non_empty_string(mig.get('mode'), 'S8-6 migration_strategy.mode', errors)
-        if not isinstance(mig.get('requires_migration_plan'), bool):
-            errors.append('S8-6 migration_strategy.requires_migration_plan must be boolean')
+        _require_non_empty_string(mig.get('approach'), 'S8-6 migration_strategy.approach', errors)
         if not isinstance(mig.get('rollback_supported'), bool):
             errors.append('S8-6 migration_strategy.rollback_supported must be boolean')
+        if not isinstance(mig.get('data_migration_required'), bool):
+            errors.append('S8-6 migration_strategy.data_migration_required must be boolean')
+        if not isinstance(mig.get('validation_before_cutover'), bool):
+            errors.append('S8-6 migration_strategy.validation_before_cutover must be boolean')
 
         replay_inputs = replay.get('replay_inputs') if isinstance(replay.get('replay_inputs'), dict) else {}
         _require_non_empty_array(replay_inputs.get('required'), 'S8-6 replay_inputs.required', errors)

@@ -1,6 +1,7 @@
 {
   "version": "v1",
   "semver_policy": {
+    "format": "major.minor.patch",
     "breaking_change_triggers": [
       "schema_field_removal",
       "required_field_addition",
@@ -18,13 +19,14 @@
     ]
   },
   "backward_compat_window": {
-    "unit": "days",
-    "value": 90,
-    "deprecation_notice_days": 30
+    "duration_days": 90,
+    "strategy": "dual_write",
+    "deprecation_notice_required": true
   },
   "migration_strategy": {
-    "mode": "explicit_migrations",
-    "requires_migration_plan": true,
-    "rollback_supported": true
+    "approach": "explicit_migrations",
+    "rollback_supported": true,
+    "data_migration_required": false,
+    "validation_before_cutover": true
   }
 }
