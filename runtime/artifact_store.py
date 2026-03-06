@@ -40,17 +40,71 @@ def persist_outputs(
     (base / "policy_snapshot.json").write_text(json.dumps(policy_snapshot, indent=2) + "\n")
     (base / "request.json").write_text(json.dumps(request_snapshot, indent=2) + "\n")
 
+    trace_cache: list[dict[str, Any]] = []
     with (base / "trace.jsonl").open("a", encoding="utf-8") as fh:
         for row in trace_rows:
+            trace_cache.append(row)
             fh.write(json.dumps(row) + "\n")
 
-    for idx, row in enumerate(evidence_rows, start=1):
+    evidence_cache = list(evidence_rows)
+    for idx, row in enumerate(evidence_cache, start=1):
         (evidence_dir / f"evidence_{idx:04d}.json").write_text(json.dumps(row, indent=2) + "\n")
+
+    last_transition_at = ""
+    for row in reversed(trace_cache):
+        ts = str(row.get("timestamp", "")).strip()
+        if ts:
+            last_transition_at = ts
+            break
+    current_state = "complete" if str(verification_artifact.get("overall_status")) == "pass" else "blocked"
+    run_state = {
+        "correlation_id": correlation_id,
+        "current_state": current_state,
+        "transitions": trace_cache,
+        "last_transition_at": last_transition_at,
+    }
+    (base / "run_state.json").write_text(json.dumps(run_state, indent=2) + "\n")
+
+    evidence_by_id = {
+        str(row.get("evidence_id", "")): row
+        for row in evidence_cache
+        if isinstance(row, dict) and str(row.get("evidence_id", "")).strip()
+    }
+    linkage_resolved = True
+    for check in verification_artifact.get("checks", []) if isinstance(verification_artifact, dict) else []:
+        refs = check.get("evidence_refs") if isinstance(check, dict) else None
+        if not isinstance(refs, list):
+            linkage_resolved = False
+            break
+        for ref in refs:
+            meta = evidence_by_id.get(str(ref))
+            if not isinstance(meta, dict):
+                linkage_resolved = False
+                break
+            if not str(meta.get("canonical_path", "")).strip():
+                linkage_resolved = False
+                break
+            if not str(meta.get("sha256", "")).strip():
+                linkage_resolved = False
+                break
+            if not isinstance(meta.get("size_bytes"), int) or int(meta.get("size_bytes", 0)) <= 0:
+                linkage_resolved = False
+                break
+        if not linkage_resolved:
+            break
+    proof = {
+        "overall_status": str(verification_artifact.get("overall_status", "")),
+        "evidence_linkage_resolved": linkage_resolved,
+        "created_at": last_transition_at,
+    }
+    (base / "proof.json").write_text(json.dumps(proof, indent=2) + "\n")
 
     required = [
         "ExecutionPlan.json",
         "BuildReport.json",
         "VerificationArtifact.json",
+        "run_state.json",
+        "proof.json",
         "trace.jsonl",
         "policy_snapshot.json",
         "request.json",

@@ -20,6 +20,8 @@ REQUIRED_FILES = [
     'ExecutionPlan.json',
     'BuildReport.json',
     'VerificationArtifact.json',
+    'run_state.json',
+    'proof.json',
     'trace.jsonl',
     'policy_snapshot.json',
     'request.json',
@@ -122,13 +124,19 @@ def _validate_run(run_name: str, out_dir: Path, errors: list[str]) -> None:
             if ref not in evidence_by_id:
                 errors.append(f'{run_name}: checks[{idx}] references unknown evidence id: {ref}')
 
-    # Optional parity checks if emitted.
     manifest = out_dir / 'manifest.json'
     proof = out_dir / 'proof.json'
+    run_state = out_dir / 'run_state.json'
     if manifest.exists() and not manifest.is_file():
         errors.append(f'{run_name}: manifest.json exists but is not a file')
-    if proof.exists() and not proof.is_file():
+    if not proof.exists():
+        errors.append(f'{run_name}: missing proof.json')
+    elif not proof.is_file():
         errors.append(f'{run_name}: proof.json exists but is not a file')
+    if not run_state.exists():
+        errors.append(f'{run_name}: missing run_state.json')
+    elif not run_state.is_file():
+        errors.append(f'{run_name}: run_state.json exists but is not a file')
 
 
 def main() -> int:
@@ -192,6 +200,9 @@ def main() -> int:
             for key in required_keys:
                 if key not in artifacts:
                     errors.append(f'{name}: bundle artifacts missing key: {key}')
+            for key in ('run_state', 'proof'):
+                if artifacts.get(key) is None:
+                    errors.append(f'{name}: bundle artifacts.{key} must be non-null')
 
     if errors:
         print('Stage 5 runtime output validation: FAIL')
