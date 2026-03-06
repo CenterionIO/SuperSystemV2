@@ -150,6 +150,49 @@ def main() -> int:
         run_dirs[name] = out_dir
         _validate_run(name, out_dir, errors)
 
+    # Generate and validate canonical_conformance_bundle.json
+    export_script = ROOT / 'tools' / 'export_canonical_conformance.py'
+    for name, out_dir in run_dirs.items():
+        proc = subprocess.run(
+            ['python3', str(export_script), str(out_dir)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            errors.append(f'{name}: export_canonical_conformance failed rc={proc.returncode}\n{proc.stderr.strip()}')
+            continue
+
+        bundle_path = out_dir / 'canonical_conformance_bundle.json'
+        if not bundle_path.exists():
+            errors.append(f'{name}: canonical_conformance_bundle.json not generated')
+            continue
+
+        try:
+            bundle = json.loads(bundle_path.read_text())
+        except json.JSONDecodeError as exc:
+            errors.append(f'{name}: canonical_conformance_bundle.json invalid JSON: {exc}')
+            continue
+
+        if bundle.get('version') != 'v1':
+            errors.append(f'{name}: bundle version must be v1')
+        if not isinstance(bundle.get('workflow_class'), str) or not bundle['workflow_class']:
+            errors.append(f'{name}: bundle workflow_class missing')
+        if not isinstance(bundle.get('run_id'), str) or not bundle['run_id']:
+            errors.append(f'{name}: bundle run_id missing')
+        artifacts = bundle.get('artifacts')
+        if not isinstance(artifacts, dict):
+            errors.append(f'{name}: bundle artifacts missing')
+        else:
+            required_keys = [
+                'verification_artifact', 'execution_plan', 'build_report',
+                'evidence_registry', 'proof', 'manifest', 'trace',
+                'run_state', 'policy_snapshot', 'request',
+            ]
+            for key in required_keys:
+                if key not in artifacts:
+                    errors.append(f'{name}: bundle artifacts missing key: {key}')
+
     if errors:
         print('Stage 5 runtime output validation: FAIL')
         for err in errors:
@@ -161,6 +204,7 @@ def main() -> int:
         if name in run_dirs:
             print(f"- {name}: {run_dirs[name]}")
     print('- checks: required files, evidence records, VerificationArtifact evidence linkage')
+    print('- canonical_conformance_bundle.json generated + validated')
     return 0
 
 

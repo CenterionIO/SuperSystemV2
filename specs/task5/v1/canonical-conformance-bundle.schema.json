@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CanonicalConformanceBundle",
+  "description": "Cross-repo conformance bundle for runtime output comparison.",
+  "type": "object",
+  "required": [
+    "version",
+    "workflow_class",
+    "run_id",
+    "artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "workflow_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifacts": {
+      "type": "object",
+      "required": [
+        "verification_artifact",
+        "execution_plan",
+        "build_report",
+        "evidence_registry",
+        "proof",
+        "manifest",
+        "trace",
+        "run_state",
+        "policy_snapshot",
+        "request"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "verification_artifact": { "$ref": "#/$defs/artifact_entry" },
+        "execution_plan": { "$ref": "#/$defs/artifact_entry" },
+        "build_report": { "$ref": "#/$defs/artifact_entry" },
+        "evidence_registry": { "$ref": "#/$defs/artifact_entry" },
+        "proof": { "$ref": "#/$defs/artifact_entry" },
+        "manifest": { "$ref": "#/$defs/artifact_entry" },
+        "trace": { "$ref": "#/$defs/artifact_entry" },
+        "run_state": { "$ref": "#/$defs/artifact_entry" },
+        "policy_snapshot": { "$ref": "#/$defs/artifact_entry" },
+        "request": { "$ref": "#/$defs/artifact_entry" }
+      }
+    }
+  },
+  "$defs": {
+    "artifact_entry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["sha256", "size_bytes"],
+          "additionalProperties": false,
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "size_bytes": { "type": "integer", "minimum": 0 }
+          }
+        },
+        { "type": "null" }
+      ]
+    }
+  }
+}
