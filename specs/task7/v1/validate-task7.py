@@ -85,6 +85,25 @@ def _validate_json_schema_subset(value: Any, schema: dict[str, Any], defs: dict[
                 _validate_json_schema_subset(row, item_schema, defs, f'{ctx}[{idx}]', errors)
 
 
+def _require_non_empty_string(value: Any, ctx: str, errors: list[str]) -> None:
+    if not isinstance(value, str) or not value.strip():
+        errors.append(f'{ctx} must be a non-empty string')
+
+
+def _require_non_empty_array(value: Any, ctx: str, errors: list[str]) -> None:
+    if not isinstance(value, list) or len(value) == 0:
+        errors.append(f'{ctx} must be a non-empty array')
+
+
+def _enforce_no_additional_properties(obj: Any, allowed: set[str], ctx: str, errors: list[str]) -> None:
+    if not isinstance(obj, dict):
+        errors.append(f'{ctx} must be an object')
+        return
+    extras = sorted(set(obj.keys()) - allowed)
+    for key in extras:
+        errors.append(f'{ctx} has disallowed additional property: {key}')
+
+
 def main() -> int:
     errors: list[str] = []
 
@@ -100,6 +119,11 @@ def main() -> int:
     for path in required:
         if not path.exists():
             errors.append(f'S8-1 missing required file: {path.name}')
+
+    versioning: dict[str, Any] = {}
+    replay: dict[str, Any] = {}
+    risk: dict[str, Any] = {}
+    ci: dict[str, Any] = {}
 
     if not errors:
         # a) versioning-migration-policy.json
@@ -205,6 +229,110 @@ def main() -> int:
             'S8-5 policy-as-code-ci-requirements',
             errors,
         )
+
+        # S8-6 fail-closed checks: explicit version pin + no additional properties + non-empty required values.
+        for name, doc in (
+            ('versioning-migration-policy.json', versioning),
+            ('replayability-spec.json', replay),
+            ('risk-tiers-policy.json', risk),
+            ('policy-as-code-ci-requirements.json', ci),
+        ):
+            if str(doc.get('version', '')) != 'v1':
+                errors.append(f'S8-6 {name} version must be exactly v1')
+
+        _enforce_no_additional_properties(
+            versioning,
+            {'version', 'semver_policy', 'backward_compat_window', 'migration_strategy'},
+            'S8-6 versioning-migration-policy',
+            errors,
+        )
+        _enforce_no_additional_properties(
+            replay,
+            {'version', 'required_artifacts', 'replay_inputs', 'determinism_requirements'},
+            'S8-6 replayability-spec',
+            errors,
+        )
+        _enforce_no_additional_properties(
+            risk,
+            {'version', 'tiers', 'tier_rules'},
+            'S8-6 risk-tiers-policy',
+            errors,
+        )
+        _enforce_no_additional_properties(
+            ci,
+            {'version', 'required_workflows', 'required_commands', 'fail_conditions'},
+            'S8-6 policy-as-code-ci-requirements',
+            errors,
+        )
+
+        _require_non_empty_string(versioning.get('version'), 'S8-6 versioning.version', errors)
+        _require_non_empty_string(replay.get('version'), 'S8-6 replayability.version', errors)
+        _require_non_empty_string(risk.get('version'), 'S8-6 risk.version', errors)
+        _require_non_empty_string(ci.get('version'), 'S8-6 ci.version', errors)
+        _require_non_empty_array(replay.get('required_artifacts'), 'S8-6 replayability.required_artifacts', errors)
+        _require_non_empty_array(ci.get('required_workflows'), 'S8-6 ci.required_workflows', errors)
+        _require_non_empty_array(ci.get('required_commands'), 'S8-6 ci.required_commands', errors)
+        _require_non_empty_array(ci.get('fail_conditions'), 'S8-6 ci.fail_conditions', errors)
+
+        # Nested strictness for core objects.
+        _enforce_no_additional_properties(
+            versioning.get('semver_policy'),
+            {'major', 'minor', 'patch'},
+            'S8-6 versioning.semver_policy',
+            errors,
+        )
+        _enforce_no_additional_properties(
+            versioning.get('backward_compat_window'),
+            {'min_supported_minor_versions', 'deprecation_notice_days'},
+            'S8-6 versioning.backward_compat_window',
+            errors,
+        )
+        _enforce_no_additional_properties(
+            versioning.get('migration_strategy'),
+            {'mode', 'requires_migration_plan', 'rollback_supported'},
+            'S8-6 versioning.migration_strategy',
+            errors,
+        )
+        _enforce_no_additional_properties(
+            replay.get('replay_inputs'),
+            {'required', 'optional'},
+            'S8-6 replayability.replay_inputs',
+            errors,
+        )
+        _enforce_no_additional_properties(
+            replay.get('determinism_requirements'),
+            {'stable_evidence_ids', 'stable_artifact_paths', 'stable_gate_outcomes_given_same_inputs'},
+            'S8-6 replayability.determinism_requirements',
+            errors,
+        )
+
+        semver = versioning.get('semver_policy') if isinstance(versioning.get('semver_policy'), dict) else {}
+        _require_non_empty_string(semver.get('major'), 'S8-6 semver_policy.major', errors)
+        _require_non_empty_string(semver.get('minor'), 'S8-6 semver_policy.minor', errors)
+        _require_non_empty_string(semver.get('patch'), 'S8-6 semver_policy.patch', errors)
+
+        bc = versioning.get('backward_compat_window') if isinstance(versioning.get('backward_compat_window'), dict) else {}
+        if not isinstance(bc.get('min_supported_minor_versions'), int):
+            errors.append('S8-6 backward_compat_window.min_supported_minor_versions must be integer')
+        if not isinstance(bc.get('deprecation_notice_days'), int):
+            errors.append('S8-6 backward_compat_window.deprecation_notice_days must be integer')
+
+        mig = versioning.get('migration_strategy') if isinstance(versioning.get('migration_strategy'), dict) else {}
+        _require_non_empty_string(mig.get('mode'), 'S8-6 migration_strategy.mode', errors)
+        if not isinstance(mig.get('requires_migration_plan'), bool):
+            errors.append('S8-6 migration_strategy.requires_migration_plan must be boolean')
+        if not isinstance(mig.get('rollback_supported'), bool):
+            errors.append('S8-6 migration_strategy.rollback_supported must be boolean')
+
+        replay_inputs = replay.get('replay_inputs') if isinstance(replay.get('replay_inputs'), dict) else {}
+        _require_non_empty_array(replay_inputs.get('required'), 'S8-6 replay_inputs.required', errors)
+        if not isinstance(replay_inputs.get('optional'), list):
+            errors.append('S8-6 replay_inputs.optional must be array')
+
+        det = replay.get('determinism_requirements') if isinstance(replay.get('determinism_requirements'), dict) else {}
+        for key in ('stable_evidence_ids', 'stable_artifact_paths', 'stable_gate_outcomes_given_same_inputs'):
+            if not isinstance(det.get(key), bool):
+                errors.append(f'S8-6 determinism_requirements.{key} must be boolean')
 
     if errors:
         print('Stage 8 gates: FAIL')
