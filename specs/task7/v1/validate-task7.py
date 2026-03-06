@@ -135,11 +135,41 @@ def main() -> int:
                 'required': ['version', 'semver_policy', 'backward_compat_window', 'migration_strategy'],
                 'properties': {
                     'version': {'type': 'string'},
-                    'semver_policy': {'type': 'object'},
-                    'backward_compat_window': {'type': 'object'},
-                    'migration_strategy': {'type': 'object'}
+                    'semver_policy': {
+                        'type': 'object',
+                        'required': ['format', 'breaking_change_triggers', 'minor_change_triggers', 'patch_change_triggers'],
+                        'properties': {
+                            'format': {'type': 'string'},
+                            'breaking_change_triggers': {'type': 'array', 'items': {'type': 'string'}},
+                            'minor_change_triggers': {'type': 'array', 'items': {'type': 'string'}},
+                            'patch_change_triggers': {'type': 'array', 'items': {'type': 'string'},
+                            },
+                        },
+                        'additionalProperties': False,
+                    },
+                    'backward_compat_window': {
+                        'type': 'object',
+                        'required': ['duration_days', 'strategy', 'deprecation_notice_required'],
+                        'properties': {
+                            'duration_days': {'type': 'integer'},
+                            'strategy': {'type': 'string'},
+                            'deprecation_notice_required': {'type': 'boolean'},
+                        },
+                        'additionalProperties': False,
+                    },
+                    'migration_strategy': {
+                        'type': 'object',
+                        'required': ['approach', 'rollback_supported', 'data_migration_required', 'validation_before_cutover'],
+                        'properties': {
+                            'approach': {'type': 'string'},
+                            'rollback_supported': {'type': 'boolean'},
+                            'data_migration_required': {'type': 'boolean'},
+                            'validation_before_cutover': {'type': 'boolean'},
+                        },
+                        'additionalProperties': False,
+                    },
                 },
-                'additionalProperties': True
+                'additionalProperties': False
             },
             {},
             'S8-2 versioning-migration-policy',
