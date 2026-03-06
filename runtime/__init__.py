@@ -9,6 +9,7 @@ from runtime.orchestrator_api import (
     runtime_tail_transitions,
 )
 from runtime.state_machine import RunState, RuntimeStateMachine, TransitionRecord
+from runtime.verification_backbone import VerificationBackbone
 from runtime.worker import RuntimeWorker
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "runtime_step",
     "runtime_tail_transitions",
     "RuntimeWorker",
+    "VerificationBackbone",
 ]

@@ -25,10 +25,12 @@ from runtime.policy_engine import (
     load_policy_bundle as _load_policy_bundle,
     next_state_for_verification as _next_state_for_verification,
 )
+from runtime.verification_backbone import VerificationBackbone
 
 server = FastMCP("mcp-verify-orchestrator")
 _POLICY_BUNDLE = _load_policy_bundle(Path(__file__).resolve().parent)
 _VERIFY_ROLE = "VerifyMCP"
+_VERIFICATION_BACKBONE = VerificationBackbone(Path(__file__).resolve().parent, _POLICY_BUNDLE)
 
 
 def _now_iso() -> str:
@@ -441,11 +443,8 @@ def verify_run(request_json: str) -> str:
     if domain == "truth":
         return json.dumps(_truth_v1(job_id, request), indent=2)
 
-    # Rebuild mode: explicit contract response until each domain plugin is implemented.
-    return json.dumps(
-        _blocked_result(job_id, domain, f"Domain '{domain}' is not implemented yet (rebuild mode)."),
-        indent=2,
-    )
+    # Stage 5: use verification backbone for non-truth domains.
+    return json.dumps(_VERIFICATION_BACKBONE.run(job_id, domain, request), indent=2)
 
 
 if __name__ == "__main__":
