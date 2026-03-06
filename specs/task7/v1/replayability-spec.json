@@ -1,8 +1,5 @@
 {
   "version": "v1",
-  "hash_algorithm": "sha256",
-  "timestamp_handling": "capture_not_replay",
-  "random_seed_policy": "not_used",
   "required_artifacts": [
     "ExecutionPlan.json",
     "BuildReport.json",
@@ -17,9 +14,11 @@
     "optional": ["seed", "runtime_flags"]
   },
   "determinism_requirements": {
-    "stable_evidence_ids": true,
-    "stable_artifact_paths": true,
-    "stable_gate_outcomes_given_same_inputs": true,
-    "stable_gate_outcomes_mechanism_notes": "Gate evaluation reads immutable artifacts and policy snapshot only; no runtime randomness."
+    "hash_algorithm": "sha256",
+    "evidence_ids": "deterministic_from_content",
+    "state_transitions": "deterministic",
+    "timestamp_handling": "capture_not_replay",
+    "random_seed": "not_used",
+    "stable_gate_outcomes_given_same_inputs": true
   }
 }

@@ -206,42 +206,42 @@ def main() -> int:
                 'type': 'object',
                 'required': [
                     'version',
-                    'hash_algorithm',
-                    'timestamp_handling',
-                    'random_seed_policy',
                     'required_artifacts',
                     'replay_inputs',
                     'determinism_requirements'
                 ],
                 'properties': {
                     'version': {'type': 'string'},
-                    'hash_algorithm': {'type': 'string'},
-                    'timestamp_handling': {'type': 'string'},
-                    'random_seed_policy': {'type': 'string'},
                     'required_artifacts': {'type': 'array', 'items': {'type': 'string'}},
                     'replay_inputs': {'type': 'object'},
                     'determinism_requirements': {'type': 'object'}
                 },
-                'additionalProperties': True
+                'additionalProperties': False
             },
             {},
             'S8-3 replayability-spec',
             errors,
         )
-        if replay.get('hash_algorithm') != 'sha256':
-            errors.append('S8-3 hash_algorithm must be sha256')
-        if replay.get('timestamp_handling') not in {'capture_not_replay', 'replay_from_trace'}:
-            errors.append('S8-3 timestamp_handling must be capture_not_replay|replay_from_trace')
-        if replay.get('random_seed_policy') not in {'not_used', 'fixed'}:
-            errors.append('S8-3 random_seed_policy must be not_used|fixed')
+        _require_non_empty_array(replay.get('required_artifacts'), 'S8-3 required_artifacts', errors)
         det_req = replay.get('determinism_requirements') if isinstance(replay.get('determinism_requirements'), dict) else {}
-        if det_req.get('stable_gate_outcomes_given_same_inputs') is not True:
-            errors.append('S8-3 determinism_requirements.stable_gate_outcomes_given_same_inputs must be true')
-        _require_non_empty_string(
-            det_req.get('stable_gate_outcomes_mechanism_notes'),
-            'S8-3 determinism_requirements.stable_gate_outcomes_mechanism_notes',
+        _enforce_no_additional_properties(
+            det_req,
+            {'hash_algorithm', 'evidence_ids', 'state_transitions', 'timestamp_handling', 'random_seed', 'stable_gate_outcomes_given_same_inputs'},
+            'S8-3 determinism_requirements',
             errors,
         )
+        if det_req.get('hash_algorithm') != 'sha256':
+            errors.append('S8-3 determinism_requirements.hash_algorithm must be "sha256"')
+        if det_req.get('evidence_ids') != 'deterministic_from_content':
+            errors.append('S8-3 determinism_requirements.evidence_ids must be "deterministic_from_content"')
+        if det_req.get('state_transitions') != 'deterministic':
+            errors.append('S8-3 determinism_requirements.state_transitions must be "deterministic"')
+        if det_req.get('timestamp_handling') != 'capture_not_replay':
+            errors.append('S8-3 determinism_requirements.timestamp_handling must be "capture_not_replay"')
+        if det_req.get('random_seed') != 'not_used':
+            errors.append('S8-3 determinism_requirements.random_seed must be "not_used"')
+        if det_req.get('stable_gate_outcomes_given_same_inputs') is not True:
+            errors.append('S8-3 determinism_requirements.stable_gate_outcomes_given_same_inputs must be true')
 
         # c) risk-tiers-policy.json
         risk = _load(risk_path)
@@ -344,9 +344,6 @@ def main() -> int:
             replay,
             {
                 'version',
-                'hash_algorithm',
-                'timestamp_handling',
-                'random_seed_policy',
                 'required_artifacts',
                 'replay_inputs',
                 'determinism_requirements'
@@ -412,10 +409,12 @@ def main() -> int:
         _enforce_no_additional_properties(
             replay.get('determinism_requirements'),
             {
-                'stable_evidence_ids',
-                'stable_artifact_paths',
-                'stable_gate_outcomes_given_same_inputs',
-                'stable_gate_outcomes_mechanism_notes'
+                'hash_algorithm',
+                'evidence_ids',
+                'state_transitions',
+                'timestamp_handling',
+                'random_seed',
+                'stable_gate_outcomes_given_same_inputs'
             },
             'S8-6 replayability.determinism_requirements',
             errors,
@@ -448,22 +447,19 @@ def main() -> int:
         _require_non_empty_array(replay_inputs.get('required'), 'S8-6 replay_inputs.required', errors)
         if not isinstance(replay_inputs.get('optional'), list):
             errors.append('S8-6 replay_inputs.optional must be array')
-        if replay.get('hash_algorithm') != 'sha256':
-            errors.append('S8-6 hash_algorithm must be sha256')
-        if replay.get('timestamp_handling') not in {'capture_not_replay', 'replay_from_trace'}:
-            errors.append('S8-6 timestamp_handling must be capture_not_replay|replay_from_trace')
-        if replay.get('random_seed_policy') not in {'not_used', 'fixed'}:
-            errors.append('S8-6 random_seed_policy must be not_used|fixed')
-
         det = replay.get('determinism_requirements') if isinstance(replay.get('determinism_requirements'), dict) else {}
-        for key in ('stable_evidence_ids', 'stable_artifact_paths', 'stable_gate_outcomes_given_same_inputs'):
-            if not isinstance(det.get(key), bool):
-                errors.append(f'S8-6 determinism_requirements.{key} must be boolean')
-        _require_non_empty_string(
-            det.get('stable_gate_outcomes_mechanism_notes'),
-            'S8-6 determinism_requirements.stable_gate_outcomes_mechanism_notes',
-            errors,
-        )
+        if det.get('hash_algorithm') != 'sha256':
+            errors.append('S8-6 determinism_requirements.hash_algorithm must be "sha256"')
+        if det.get('evidence_ids') != 'deterministic_from_content':
+            errors.append('S8-6 determinism_requirements.evidence_ids must be "deterministic_from_content"')
+        if det.get('state_transitions') != 'deterministic':
+            errors.append('S8-6 determinism_requirements.state_transitions must be "deterministic"')
+        if det.get('timestamp_handling') != 'capture_not_replay':
+            errors.append('S8-6 determinism_requirements.timestamp_handling must be "capture_not_replay"')
+        if det.get('random_seed') != 'not_used':
+            errors.append('S8-6 determinism_requirements.random_seed must be "not_used"')
+        if det.get('stable_gate_outcomes_given_same_inputs') is not True:
+            errors.append('S8-6 determinism_requirements.stable_gate_outcomes_given_same_inputs must be true')
 
     if errors:
         print('Stage 8 gates: FAIL')
