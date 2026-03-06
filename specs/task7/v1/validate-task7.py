@@ -174,6 +174,18 @@ def main() -> int:
             if not isinstance(row.get('required_gates'), list):
                 errors.append(f'S8-4 tier_rules.{tier}.required_gates must be array')
 
+        low_gates = set((tier_rules.get('low') or {}).get('required_gates', []))
+        med_gates = set((tier_rules.get('med') or {}).get('required_gates', []))
+        high_gates = set((tier_rules.get('high') or {}).get('required_gates', []))
+        if not low_gates.issubset(med_gates):
+            errors.append('S8-4 gate hierarchy violation: low.required_gates must be subset of med.required_gates')
+        if not med_gates.issubset(high_gates):
+            errors.append('S8-4 gate hierarchy violation: med.required_gates must be subset of high.required_gates')
+        if not (len(low_gates) < len(med_gates)):
+            errors.append('S8-4 gate cardinality violation: low.required_gates must be strictly fewer than med.required_gates')
+        if not (len(med_gates) <= len(high_gates)):
+            errors.append('S8-4 gate cardinality violation: med.required_gates must be fewer or equal to high.required_gates')
+
         # d) policy-as-code-ci-requirements.json
         ci = _load(ci_path)
         _validate_json_schema_subset(
