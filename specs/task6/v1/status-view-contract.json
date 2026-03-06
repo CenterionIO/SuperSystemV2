@@ -4,18 +4,24 @@
   "type": "object",
   "required": [
     "correlation_id",
+    "workflow_class",
+    "autonomy_mode",
     "current_state",
-    "last_transition_at",
     "run_status",
+    "last_transition_at",
     "why",
+    "blocked_reason",
     "next_action"
   ],
   "properties": {
     "correlation_id": { "type": "string" },
+    "workflow_class": { "type": "string" },
+    "autonomy_mode": { "type": "string" },
     "current_state": { "type": "string" },
-    "last_transition_at": { "type": "string", "format": "date-time" },
     "run_status": { "type": "string", "enum": ["running", "blocked"] },
+    "last_transition_at": { "type": "string", "format": "date-time" },
     "why": { "type": "string" },
+    "blocked_reason": { "type": ["string", "null"] },
     "next_action": { "type": "string" }
   },
   "additionalProperties": false

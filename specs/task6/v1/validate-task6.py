@@ -137,36 +137,85 @@ def main() -> int:
         _validate_json_schema_subset(
             {
                 'correlation_id': 'corr-example',
+                'workflow_class': 'code_change',
+                'autonomy_mode': 'approve_final',
                 'current_state': 'build_review',
                 'last_transition_at': '2026-03-06T00:00:00Z',
                 'run_status': 'running',
                 'why': 'awaiting verification',
+                'blocked_reason': None,
                 'next_action': 'run verification gate',
             },
             status_view_schema,
             status_view_schema.get('$defs', {}),
-            'S6-5 status-view-contract',
+            'S6-4 status-view-contract',
             errors,
         )
         _validate_json_schema_subset(
             {
                 'correlation_id': 'corr-example',
+                'workflow_class': 'code_change',
+                'autonomy_mode': 'approve_each',
                 'current_state': 'escalation',
                 'last_transition_at': '2026-03-06T00:00:00Z',
                 'run_status': 'blocked',
                 'why': 'missing required evidence linkage',
+                'blocked_reason': 'missing required evidence linkage',
                 'next_action': 'review escalation prompt',
             },
             status_view_schema,
             status_view_schema.get('$defs', {}),
-            'S6-5 status-view-contract',
+            'S6-4 status-view-contract',
             errors,
         )
+        # Canonical union invariants:
+        # - running => blocked_reason must be null
+        # - blocked => blocked_reason + why must be non-empty strings
+        sample_running = {
+            'correlation_id': 'corr-run',
+            'workflow_class': 'code_change',
+            'autonomy_mode': 'approve_final',
+            'current_state': 'building',
+            'run_status': 'running',
+            'last_transition_at': '2026-03-06T00:00:00Z',
+            'why': 'build in progress',
+            'blocked_reason': None,
+            'next_action': 'wait',
+        }
+        sample_blocked = {
+            'correlation_id': 'corr-blocked',
+            'workflow_class': 'ops_fix',
+            'autonomy_mode': 'approve_each',
+            'current_state': 'escalation',
+            'run_status': 'blocked',
+            'last_transition_at': '2026-03-06T00:00:00Z',
+            'why': 'approval required',
+            'blocked_reason': 'approval required',
+            'next_action': 'review escalation',
+        }
+        for row in (sample_running, sample_blocked):
+            if row['run_status'] == 'running':
+                if row.get('blocked_reason') is not None:
+                    errors.append('S6-4 invariant: run_status=running requires blocked_reason=null')
+            elif row['run_status'] == 'blocked':
+                br = row.get('blocked_reason')
+                why = row.get('why')
+                if not isinstance(br, str) or not br.strip():
+                    errors.append('S6-4 invariant: run_status=blocked requires non-empty blocked_reason')
+                if not isinstance(why, str) or not why.strip():
+                    errors.append('S6-4 invariant: run_status=blocked requires non-empty why')
+
         status_enum = (
             (status_view_schema.get('properties') or {}).get('run_status') or {}
         ).get('enum', [])
         if sorted(status_enum) != ['blocked', 'running']:
-            errors.append('S6-5 status-view-contract run_status enum must be [running, blocked]')
+            errors.append('S6-4 status-view-contract run_status enum must be [running, blocked]')
+
+        blocked_reason_schema = ((status_view_schema.get('properties') or {}).get('blocked_reason') or {})
+        blocked_reason_type = blocked_reason_schema.get('type')
+        blocked_reason_types = blocked_reason_type if isinstance(blocked_reason_type, list) else [blocked_reason_type]
+        if sorted(t for t in blocked_reason_types if isinstance(t, str)) != ['null', 'string']:
+            errors.append('S6-4 status-view-contract blocked_reason must be nullable string')
 
         required_modes = ['approve_each', 'approve_final', 'full_auto']
         for mode in required_modes:
