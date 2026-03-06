@@ -1,0 +1,65 @@
+{
+  "policy_type": "routing_policy",
+  "version": "v1",
+  "fail_closed": {
+    "required_warn_behavior": "blocked",
+    "required_warn_exception_requires_artifact": true,
+    "required_missing_check_behavior": "blocked"
+  },
+  "classes": {
+    "code_change": {
+      "normal_flow": ["intake", "classify", "planning", "implementation", "verifying", "completed"],
+      "rework_routes": {
+        "verification_fail": "build_rework",
+        "plan_blocker": "plan_rework"
+      },
+      "blocked_evidence_route": "blocked_evidence",
+      "escalation_route": "escalation"
+    },
+    "mcp_tool": {
+      "normal_flow": ["intake", "classify", "planning", "implementation", "verifying", "completed"],
+      "rework_routes": {
+        "verification_fail": "build_rework",
+        "plan_blocker": "plan_rework"
+      },
+      "blocked_evidence_route": "blocked_evidence",
+      "escalation_route": "escalation"
+    },
+    "research_only": {
+      "normal_flow": ["intake", "classify", "research", "verifying", "completed"],
+      "rework_routes": {
+        "verification_fail": "research_rework",
+        "plan_blocker": "plan_rework"
+      },
+      "blocked_evidence_route": "blocked_evidence",
+      "escalation_route": "escalation"
+    },
+    "transcription": {
+      "normal_flow": ["intake", "classify", "implementation", "verifying", "completed"],
+      "rework_routes": {
+        "verification_fail": "build_rework",
+        "plan_blocker": "plan_rework"
+      },
+      "blocked_evidence_route": "blocked_evidence",
+      "escalation_route": "escalation"
+    },
+    "ui_change": {
+      "normal_flow": ["intake", "classify", "planning", "implementation", "verifying", "completed"],
+      "rework_routes": {
+        "verification_fail": "build_rework",
+        "plan_blocker": "plan_rework"
+      },
+      "blocked_evidence_route": "blocked_evidence",
+      "escalation_route": "escalation"
+    },
+    "ops_fix": {
+      "normal_flow": ["intake", "classify", "planning", "implementation", "verifying", "completed"],
+      "rework_routes": {
+        "verification_fail": "build_rework",
+        "plan_blocker": "plan_rework"
+      },
+      "blocked_evidence_route": "blocked_evidence",
+      "escalation_route": "escalation"
+    }
+  }
+}

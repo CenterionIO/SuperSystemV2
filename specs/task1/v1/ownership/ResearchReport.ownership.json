@@ -1,0 +1,27 @@
+{
+  "schema": "ResearchReport",
+  "version": "v1",
+  "path_format": "json-pointer-with-array-wildcard",
+  "deny_by_default": true,
+  "fieldOwnership": {
+    "/schema_version": { "writtenBy": ["Research"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/report_id": { "writtenBy": ["Research"], "readableBy": ["Orchestrator", "Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/workflow_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/correlation_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/claims": { "writtenBy": ["Research"], "readableBy": ["Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/claims/[]/claim_id": { "writtenBy": ["Research"], "readableBy": ["Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/claims/[]/text": { "writtenBy": ["Research"], "readableBy": ["Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/claims/[]/source_ids": { "writtenBy": ["Research"], "readableBy": ["Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/claims/[]/source_ids/[]": { "writtenBy": ["Research"], "readableBy": ["Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/sources": { "writtenBy": ["Research"], "readableBy": ["Verify MCP", "Planner"], "verifiedBy": ["Verify MCP"] },
+    "/sources/[]/source_id": { "writtenBy": ["Research"], "readableBy": ["Verify MCP", "Planner"], "verifiedBy": ["Verify MCP"] },
+    "/sources/[]/uri": { "writtenBy": ["Research"], "readableBy": ["Verify MCP", "Planner"], "verifiedBy": ["Verify MCP"] },
+    "/sources/[]/captured_at": { "writtenBy": ["Research"], "readableBy": ["Verify MCP", "Planner"], "verifiedBy": ["Verify MCP"] },
+    "/sources/[]/checksum": { "writtenBy": ["Research"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/extracted_requirements": { "writtenBy": ["Research"], "readableBy": ["Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/extracted_requirements/[]": { "writtenBy": ["Research"], "readableBy": ["Planner", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/freshness": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/freshness/required": { "writtenBy": ["Orchestrator"], "readableBy": ["Research", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/freshness/status": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] }
+  }
+}

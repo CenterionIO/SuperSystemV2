@@ -1,0 +1,24 @@
+{
+  "schema": "BuildReport",
+  "version": "v1",
+  "path_format": "json-pointer-with-array-wildcard",
+  "deny_by_default": true,
+  "fieldOwnership": {
+    "/schema_version": { "writtenBy": ["Builder"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/build_report_id": { "writtenBy": ["Builder"], "readableBy": ["Orchestrator", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/workflow_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/correlation_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/plan_id": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/criteria_results": { "writtenBy": ["Builder"], "readableBy": ["Orchestrator", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/criteria_results/[]/criteria_id": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/criteria_results/[]/status": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/criteria_results/[]/evidence_ids": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/criteria_results/[]/evidence_ids/[]": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/artifacts": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP", "Orchestrator"], "verifiedBy": ["Verify MCP"] },
+    "/artifacts/[]/evidence_id": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/artifacts/[]/kind": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/artifacts/[]/path": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/artifacts/[]/sha256": { "writtenBy": ["Builder"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/notes": { "writtenBy": ["Builder"], "readableBy": ["Orchestrator", "Verify MCP"], "verifiedBy": ["Verify MCP"] }
+  }
+}

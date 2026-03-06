@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "supersystem/policy/v1/policy_schema",
+  "title": "SuperSystem Policy Schema v1",
+  "type": "object",
+  "required": ["policy_type", "version"],
+  "properties": {
+    "policy_type": {
+      "type": "string",
+      "enum": ["workflow_taxonomy", "routing_policy", "permissions_policy", "override_policy"]
+    },
+    "version": {"type": "string", "const": "v1"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"policy_type": {"const": "workflow_taxonomy"}}},
+      "then": {"$ref": "#/$defs/workflow_taxonomy"}
+    },
+    {
+      "if": {"properties": {"policy_type": {"const": "routing_policy"}}},
+      "then": {"$ref": "#/$defs/routing_policy"}
+    },
+    {
+      "if": {"properties": {"policy_type": {"const": "permissions_policy"}}},
+      "then": {"$ref": "#/$defs/permissions_policy"}
+    },
+    {
+      "if": {"properties": {"policy_type": {"const": "override_policy"}}},
+      "then": {"$ref": "#/$defs/override_policy"}
+    }
+  ],
+  "$defs": {
+    "workflow_class": {
+      "type": "string",
+      "enum": ["code_change", "mcp_tool", "research_only", "transcription", "ui_change", "ops_fix"]
+    },
+    "autonomy_mode": {
+      "type": "string",
+      "enum": ["approve_each", "approve_final", "full_auto"]
+    },
+    "risk_tier": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "role": {
+      "type": "string",
+      "enum": ["Operator", "Orchestrator", "Planner", "Research", "Builder", "VerifyMCP", "PlatformRecovery"]
+    },
+    "check_type": {
+      "type": "string",
+      "enum": ["acceptance_criteria", "plan_build_alignment", "research_plan_alignment", "permissions_scope", "evidence_integrity", "freshness"]
+    },
+    "workflow_taxonomy": {
+      "type": "object",
+      "required": ["policy_type", "version", "classes"],
+      "properties": {
+        "policy_type": {"const": "workflow_taxonomy"},
+        "version": {"const": "v1"},
+        "classes": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/workflow_class"},
+          "additionalProperties": {
+            "type": "object",
+            "required": ["verification_ladder", "required_checks", "required_evidence_types", "default_autonomy_mode", "default_risk_tier"],
+            "properties": {
+              "verification_ladder": {"type": "array", "items": {"type": "string"}},
+              "required_checks": {"type": "array", "items": {"$ref": "#/$defs/check_type"}},
+              "required_evidence_types": {"type": "array", "items": {"type": "string"}},
+              "default_autonomy_mode": {"$ref": "#/$defs/autonomy_mode"},
+              "default_risk_tier": {"$ref": "#/$defs/risk_tier"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "routing_policy": {
+      "type": "object",
+      "required": ["policy_type", "version", "classes", "fail_closed"],
+      "properties": {
+        "policy_type": {"const": "routing_policy"},
+        "version": {"const": "v1"},
+        "fail_closed": {
+          "type": "object",
+          "required": ["required_warn_behavior", "required_warn_exception_requires_artifact", "required_missing_check_behavior"],
+          "properties": {
+            "required_warn_behavior": {"type": "string", "enum": ["blocked"]},
+            "required_warn_exception_requires_artifact": {"type": "boolean"},
+            "required_missing_check_behavior": {"type": "string", "enum": ["blocked"]}
+          },
+          "additionalProperties": false
+        },
+        "classes": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/workflow_class"},
+          "additionalProperties": {
+            "type": "object",
+            "required": ["normal_flow", "rework_routes", "blocked_evidence_route", "escalation_route"],
+            "properties": {
+              "normal_flow": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+              "rework_routes": {
+                "type": "object",
+                "required": ["verification_fail", "plan_blocker"],
+                "properties": {
+                  "verification_fail": {"type": "string"},
+                  "plan_blocker": {"type": "string"}
+                },
+                "additionalProperties": false
+              },
+              "blocked_evidence_route": {"type": "string"},
+              "escalation_route": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "permissions_policy": {
+      "type": "object",
+      "required": ["policy_type", "version", "default_deny", "roles"],
+      "properties": {
+        "policy_type": {"const": "permissions_policy"},
+        "version": {"const": "v1"},
+        "default_deny": {"type": "boolean", "const": true},
+        "roles": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/role"},
+          "additionalProperties": {
+            "type": "object",
+            "required": ["allowed_tools", "denied_tools", "path_scope", "network_scope", "enforced_by"],
+            "properties": {
+              "allowed_tools": {"type": "array", "items": {"type": "string"}},
+              "denied_tools": {"type": "array", "items": {"type": "string"}},
+              "path_scope": {
+                "type": "object",
+                "required": ["read", "write"],
+                "properties": {
+                  "read": {"type": "array", "items": {"type": "string"}},
+                  "write": {"type": "array", "items": {"type": "string"}}
+                },
+                "additionalProperties": false
+              },
+              "network_scope": {
+                "type": "object",
+                "required": ["allow", "deny"],
+                "properties": {
+                  "allow": {"type": "array", "items": {"type": "string"}},
+                  "deny": {"type": "array", "items": {"type": "string"}}
+                },
+                "additionalProperties": false
+              },
+              "enforced_by": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "override_policy": {
+      "type": "object",
+      "required": ["policy_type", "version", "precedence", "council_override", "audit_requirements"],
+      "properties": {
+        "policy_type": {"const": "override_policy"},
+        "version": {"const": "v1"},
+        "precedence": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 3
+        },
+        "council_override": {
+          "type": "object",
+          "required": ["enabled", "allowed_when", "requires_artifacts"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "allowed_when": {"type": "array", "items": {"type": "string"}},
+            "requires_artifacts": {"type": "array", "items": {"type": "string"}}
+          },
+          "additionalProperties": false
+        },
+        "audit_requirements": {
+          "type": "object",
+          "required": ["required_fields"],
+          "properties": {
+            "required_fields": {"type": "array", "items": {"type": "string"}}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "unevaluatedProperties": false
+}

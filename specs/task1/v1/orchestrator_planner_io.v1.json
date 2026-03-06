@@ -1,0 +1,88 @@
+{
+  "version": "v1",
+  "status_taxonomy": ["pass", "warn", "fail", "blocked"],
+  "orchestrator_to_planner": {
+    "type": "object",
+    "required": [
+      "correlation_id",
+      "workflow_id",
+      "workflow_class",
+      "autonomy_mode",
+      "goal",
+      "constraints",
+      "required_criteria_ids",
+      "input_artifacts"
+    ],
+    "properties": {
+      "correlation_id": { "type": "string" },
+      "workflow_id": { "type": "string" },
+      "workflow_class": {
+        "type": "string",
+        "enum": ["code_change", "mcp_tool", "research_only", "transcription", "ui_change", "ops_fix"]
+      },
+      "risk_tier": { "type": "string", "enum": ["low", "medium", "high"] },
+      "autonomy_mode": {
+        "type": "string",
+        "enum": ["approve_each", "approve_final", "full_auto"]
+      },
+      "goal": { "type": "string" },
+      "constraints": { "type": "array", "items": { "type": "string" } },
+      "required_criteria_ids": { "type": "array", "items": { "type": "string" } },
+      "input_artifacts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["artifact_id", "artifact_type"],
+          "properties": {
+            "artifact_id": { "type": "string" },
+            "artifact_type": { "type": "string" }
+          }
+        }
+      },
+      "research_required": { "type": "boolean" },
+      "deadline_hint": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "planner_to_orchestrator": {
+    "type": "object",
+    "required": [
+      "correlation_id",
+      "workflow_id",
+      "execution_plan_id",
+      "criteria_ids",
+      "steps",
+      "assumptions",
+      "risks"
+    ],
+    "properties": {
+      "correlation_id": { "type": "string" },
+      "workflow_id": { "type": "string" },
+      "execution_plan_id": { "type": "string" },
+      "criteria_ids": { "type": "array", "items": { "type": "string" } },
+      "steps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["step_id", "description", "criteria_ids", "depends_on"],
+          "properties": {
+            "step_id": { "type": "string" },
+            "description": { "type": "string" },
+            "criteria_ids": { "type": "array", "items": { "type": "string" } },
+            "depends_on": { "type": "array", "items": { "type": "string" } },
+            "required_tools": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "assumptions": { "type": "array", "items": { "type": "string" } },
+      "risks": { "type": "array", "items": { "type": "string" } },
+      "planning_notes": { "type": "string" }
+    },
+    "additionalProperties": false
+  },
+  "boundary_assertions": [
+    "planner_to_orchestrator MUST NOT include routing mutations",
+    "orchestrator_to_planner MUST NOT include authored step content"
+  ]
+}

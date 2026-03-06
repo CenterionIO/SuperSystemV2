@@ -1,0 +1,19 @@
+{
+  "schema_version": "v1",
+  "verification_id": "va_001",
+  "workflow_id": "wf_001",
+  "correlation_id": "corr_001",
+  "verifier_version": "mcp-verify-orchestrator@v1",
+  "checks": [
+    {
+      "check_id": "chk_001",
+      "check_type": "acceptance_criteria",
+      "required": true,
+      "status": "pass",
+      "message": "All required criteria mapped and satisfied."
+    }
+  ],
+  "overall_status": "pass",
+  "fail_closed": true,
+  "blocker_reason": ""
+}

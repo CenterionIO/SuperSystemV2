@@ -1,0 +1,35 @@
+{
+  "policy_type": "override_policy",
+  "version": "v1",
+  "precedence": [
+    "fail_closed_rules",
+    "boundary_rules",
+    "permissions_policy",
+    "routing_policy",
+    "advisory_outputs"
+  ],
+  "council_override": {
+    "enabled": true,
+    "allowed_when": [
+      "verifier_conflict_unresolved",
+      "high_risk_exception_requested",
+      "policy_conflict_requires_manual_decision"
+    ],
+    "requires_artifacts": [
+      "decision_memo",
+      "risk_assessment",
+      "override_justification",
+      "expiry_trigger"
+    ]
+  },
+  "audit_requirements": {
+    "required_fields": [
+      "correlation_id",
+      "workflow_id",
+      "decision_id",
+      "owner",
+      "timestamp",
+      "evidence_ids"
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "ExecutionPlan",
+  "version": "v1",
+  "path_format": "json-pointer-with-array-wildcard",
+  "deny_by_default": true,
+  "fieldOwnership": {
+    "/schema_version": { "writtenBy": ["Planner"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/plan_id": { "writtenBy": ["Planner"], "readableBy": ["Orchestrator", "Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/workflow_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/correlation_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/workflow_class": { "writtenBy": ["Orchestrator"], "readableBy": ["Planner", "Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/autonomy_mode": { "writtenBy": ["Orchestrator"], "readableBy": ["Planner", "Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/criteria_ids": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/criteria_ids/[]": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/step_id": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/description": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/criteria_ids": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/criteria_ids/[]": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/depends_on": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/depends_on/[]": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/required_tools": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/steps/[]/required_tools/[]": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/risks": { "writtenBy": ["Planner"], "readableBy": ["Orchestrator", "Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/risks/[]": { "writtenBy": ["Planner"], "readableBy": ["Orchestrator", "Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/assumptions": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/assumptions/[]": { "writtenBy": ["Planner"], "readableBy": ["Builder", "Verify MCP"], "verifiedBy": ["Verify MCP"] }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "supersystem/schemas/v1/VerificationArtifact",
+  "title": "VerificationArtifact",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "verification_id",
+    "workflow_id",
+    "correlation_id",
+    "verifier_version",
+    "checks",
+    "overall_status",
+    "fail_closed"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "v1" },
+    "verification_id": { "type": "string" },
+    "workflow_id": { "type": "string" },
+    "correlation_id": { "type": "string" },
+    "verifier_version": { "type": "string" },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["check_id", "check_type", "required", "status"],
+        "properties": {
+          "check_id": { "type": "string" },
+          "check_type": { "type": "string" },
+          "required": { "type": "boolean" },
+          "status": { "type": "string", "enum": ["pass", "warn", "fail", "blocked"] },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "overall_status": { "type": "string", "enum": ["pass", "warn", "fail", "blocked"] },
+    "fail_closed": { "type": "boolean" },
+    "blocker_reason": { "type": "string" }
+  },
+  "additionalProperties": false
+}

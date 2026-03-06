@@ -1,0 +1,23 @@
+{
+  "schema_version": "v1",
+  "build_report_id": "br_001",
+  "workflow_id": "wf_001",
+  "correlation_id": "corr_001",
+  "plan_id": "ep_001",
+  "criteria_results": [
+    {
+      "criteria_id": "crit_001",
+      "status": "pass",
+      "evidence_ids": ["ev_001"]
+    }
+  ],
+  "artifacts": [
+    {
+      "evidence_id": "ev_001",
+      "kind": "test_log",
+      "path": "/tmp/test.log",
+      "sha256": "abc123"
+    }
+  ],
+  "notes": "Build completed with all required checks executed."
+}

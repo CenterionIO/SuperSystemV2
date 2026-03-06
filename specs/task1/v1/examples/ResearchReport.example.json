@@ -1,0 +1,26 @@
+{
+  "schema_version": "v1",
+  "report_id": "rr_001",
+  "workflow_id": "wf_001",
+  "correlation_id": "corr_001",
+  "claims": [
+    {
+      "claim_id": "c_001",
+      "text": "Verification artifacts should be immutable.",
+      "source_ids": ["s_001"]
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "s_001",
+      "uri": "https://example.com/spec",
+      "captured_at": "2026-03-05T10:00:00Z",
+      "checksum": "sha256:abc"
+    }
+  ],
+  "extracted_requirements": ["immutable_artifacts", "fail_closed"],
+  "freshness": {
+    "required": true,
+    "status": "pass"
+  }
+}

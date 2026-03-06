@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "supersystem/schemas/v1/ExecutionPlan",
+  "title": "ExecutionPlan",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plan_id",
+    "workflow_id",
+    "correlation_id",
+    "workflow_class",
+    "autonomy_mode",
+    "criteria_ids",
+    "steps"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "v1" },
+    "plan_id": { "type": "string" },
+    "workflow_id": { "type": "string" },
+    "correlation_id": { "type": "string" },
+    "workflow_class": {
+      "type": "string",
+      "enum": ["code_change", "mcp_tool", "research_only", "transcription", "ui_change", "ops_fix"]
+    },
+    "autonomy_mode": { "type": "string", "enum": ["approve_each", "approve_final", "full_auto"] },
+    "criteria_ids": { "type": "array", "items": { "type": "string" } },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step_id", "description", "criteria_ids", "depends_on"],
+        "properties": {
+          "step_id": { "type": "string" },
+          "description": { "type": "string" },
+          "criteria_ids": { "type": "array", "items": { "type": "string" } },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "required_tools": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "risks": { "type": "array", "items": { "type": "string" } },
+    "assumptions": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

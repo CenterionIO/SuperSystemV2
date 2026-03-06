@@ -1,0 +1,22 @@
+{
+  "schema": "VerificationArtifact",
+  "version": "v1",
+  "path_format": "json-pointer-with-array-wildcard",
+  "deny_by_default": true,
+  "fieldOwnership": {
+    "/schema_version": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/verification_id": { "writtenBy": ["Verify MCP"], "readableBy": ["Orchestrator", "Operator", "Planner", "Builder"], "verifiedBy": ["Verify MCP"] },
+    "/workflow_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/correlation_id": { "writtenBy": ["Orchestrator"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/verifier_version": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/checks": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/checks/[]/check_id": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/checks/[]/check_type": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/checks/[]/required": { "writtenBy": ["Orchestrator"], "readableBy": ["Verify MCP"], "verifiedBy": ["Verify MCP"] },
+    "/checks/[]/status": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/checks/[]/message": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/overall_status": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/fail_closed": { "writtenBy": ["Verify MCP"], "readableBy": ["*"], "verifiedBy": ["Verify MCP"] },
+    "/blocker_reason": { "writtenBy": ["Verify MCP"], "readableBy": ["Orchestrator", "Operator"], "verifiedBy": ["Verify MCP"] }
+  }
+}

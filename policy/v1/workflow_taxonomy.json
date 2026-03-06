@@ -1,0 +1,48 @@
+{
+  "policy_type": "workflow_taxonomy",
+  "version": "v1",
+  "classes": {
+    "code_change": {
+      "verification_ladder": ["unit", "integration"],
+      "required_checks": ["acceptance_criteria", "plan_build_alignment", "evidence_integrity", "permissions_scope"],
+      "required_evidence_types": ["diff", "test_log", "command_log", "artifact_hash"],
+      "default_autonomy_mode": "approve_final",
+      "default_risk_tier": "medium"
+    },
+    "mcp_tool": {
+      "verification_ladder": ["unit", "integration"],
+      "required_checks": ["acceptance_criteria", "plan_build_alignment", "permissions_scope", "evidence_integrity"],
+      "required_evidence_types": ["diff", "test_log", "api_trace", "artifact_hash"],
+      "default_autonomy_mode": "approve_final",
+      "default_risk_tier": "medium"
+    },
+    "research_only": {
+      "verification_ladder": ["freshness"],
+      "required_checks": ["research_plan_alignment", "freshness"],
+      "required_evidence_types": ["source_ref", "timestamped_lookup", "artifact_hash"],
+      "default_autonomy_mode": "approve_each",
+      "default_risk_tier": "high"
+    },
+    "transcription": {
+      "verification_ladder": [],
+      "required_checks": ["evidence_integrity"],
+      "required_evidence_types": ["transcript_file", "artifact_hash"],
+      "default_autonomy_mode": "full_auto",
+      "default_risk_tier": "low"
+    },
+    "ui_change": {
+      "verification_ladder": ["unit", "visual"],
+      "required_checks": ["acceptance_criteria", "plan_build_alignment", "evidence_integrity"],
+      "required_evidence_types": ["diff", "screenshot", "test_log", "artifact_hash"],
+      "default_autonomy_mode": "approve_final",
+      "default_risk_tier": "medium"
+    },
+    "ops_fix": {
+      "verification_ladder": ["integration"],
+      "required_checks": ["acceptance_criteria", "permissions_scope", "evidence_integrity", "freshness"],
+      "required_evidence_types": ["runbook_log", "health_check", "artifact_hash"],
+      "default_autonomy_mode": "approve_each",
+      "default_risk_tier": "high"
+    }
+  }
+}

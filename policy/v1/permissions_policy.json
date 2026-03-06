@@ -1,0 +1,56 @@
+{
+  "policy_type": "permissions_policy",
+  "version": "v1",
+  "default_deny": true,
+  "roles": {
+    "Operator": {
+      "allowed_tools": ["orchestrator.submit_request", "ui.render_status"],
+      "denied_tools": ["planner.author_plan", "builder.execute", "verify.run"],
+      "path_scope": {"read": ["/Users/ai/SuperSystemV2"], "write": ["/Users/ai/SuperSystemV2/runtime/session"]},
+      "network_scope": {"allow": ["none"], "deny": ["*"]},
+      "enforced_by": ["tool_allowlist", "runtime_guard"]
+    },
+    "Orchestrator": {
+      "allowed_tools": ["planner.request_plan", "research.request_report", "builder.request_build", "verify.request_verification", "recovery.request"],
+      "denied_tools": ["planner.author_plan", "builder.execute_direct"],
+      "path_scope": {"read": ["/Users/ai/SuperSystemV2"], "write": ["/Users/ai/SuperSystemV2/runtime/state"]},
+      "network_scope": {"allow": ["internal"], "deny": ["external"]},
+      "enforced_by": ["tool_allowlist", "runtime_guard", "policy_engine"]
+    },
+    "Planner": {
+      "allowed_tools": ["planner.author_plan"],
+      "denied_tools": ["orchestrator.route", "builder.execute", "verify.run"],
+      "path_scope": {"read": ["/Users/ai/SuperSystemV2/policy", "/Users/ai/SuperSystemV2/specs"], "write": ["/Users/ai/SuperSystemV2/runtime/plans"]},
+      "network_scope": {"allow": ["none"], "deny": ["*"]},
+      "enforced_by": ["tool_allowlist", "schema_validator", "ownership_lint"]
+    },
+    "Research": {
+      "allowed_tools": ["research.search", "research.fetch", "research.summarize"],
+      "denied_tools": ["orchestrator.route", "builder.execute"],
+      "path_scope": {"read": ["/Users/ai/SuperSystemV2/specs"], "write": ["/Users/ai/SuperSystemV2/runtime/research"]},
+      "network_scope": {"allow": ["approved_sources"], "deny": ["unapproved_sources"]},
+      "enforced_by": ["network_policy", "runtime_guard"]
+    },
+    "Builder": {
+      "allowed_tools": ["builder.execute", "builder.test", "builder.report"],
+      "denied_tools": ["orchestrator.route", "planner.author_plan"],
+      "path_scope": {"read": ["/Users/ai/SuperSystemV2/runtime/plans"], "write": ["/Users/ai/SuperSystemV2/runtime/builds"]},
+      "network_scope": {"allow": ["internal_services"], "deny": ["external_by_default"]},
+      "enforced_by": ["path_scope_guard", "tool_allowlist", "runtime_guard"]
+    },
+    "VerifyMCP": {
+      "allowed_tools": ["verify.run", "verify.read_artifacts", "verify.write_verdict"],
+      "denied_tools": ["builder.execute", "planner.author_plan", "orchestrator.route"],
+      "path_scope": {"read": ["/Users/ai/SuperSystemV2/runtime"], "write": ["/Users/ai/SuperSystemV2/runtime/verification"]},
+      "network_scope": {"allow": ["approved_sources"], "deny": ["unapproved_sources"]},
+      "enforced_by": ["runtime_guard", "artifact_integrity_guard", "policy_engine"]
+    },
+    "PlatformRecovery": {
+      "allowed_tools": ["recovery.run_runbook", "recovery.health_check"],
+      "denied_tools": ["planner.author_plan", "builder.execute"],
+      "path_scope": {"read": ["/Users/ai/SuperSystemV2/runtime"], "write": ["/Users/ai/SuperSystemV2/runtime/recovery"]},
+      "network_scope": {"allow": ["internal"], "deny": ["external"]},
+      "enforced_by": ["runbook_caps", "runtime_guard"]
+    }
+  }
+}

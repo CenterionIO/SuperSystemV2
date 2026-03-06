@@ -1,0 +1,173 @@
+version: v1
+statuses:
+  - pass
+  - warn
+  - fail
+  - blocked
+states:
+  - intake
+  - classify
+  - research
+  - research_rework
+  - planning
+  - plan_rework
+  - implementation
+  - verifying
+  - build_rework
+  - completed
+  - completed_with_warnings
+  - blocked
+  - blocked_evidence
+  - blocked_platform
+  - escalation
+transitions:
+  - from: intake
+    to: classify
+    condition: operator_request_valid
+  - from: classify
+    to: research
+    condition: research_required
+  - from: classify
+    to: planning
+    condition: research_not_required
+
+  - from: research
+    to: planning
+    condition: verify_research_plan == pass
+  - from: research
+    to: research_rework
+    condition: verify_research_plan == fail
+  - from: research
+    to: blocked_evidence
+    condition: verify_research_plan in [warn, blocked]
+  - from: research_rework
+    to: research
+    condition: research_patch_submitted
+
+  - from: planning
+    to: implementation
+    condition: verify_plan_build == pass
+  - from: planning
+    to: plan_rework
+    condition: verify_plan_build == fail
+  - from: planning
+    to: blocked_evidence
+    condition: verify_plan_build in [warn, blocked]
+  - from: plan_rework
+    to: planning
+    condition: planner_patch_submitted
+
+  - from: implementation
+    to: verifying
+    condition: build_report_submitted
+  - from: implementation
+    to: blocked
+    condition: plan_blocker
+
+  - from: verifying
+    to: completed
+    condition: verify_overall == pass
+  - from: verifying
+    to: completed_with_warnings
+    condition: verify_overall == warn_optional_only
+  - from: verifying
+    to: build_rework
+    condition: verify_overall == fail
+  - from: verifying
+    to: blocked_evidence
+    condition: verify_overall in [warn_required_present, blocked]
+
+  - from: build_rework
+    to: implementation
+    condition: build_patch_submitted
+
+  - from: blocked_evidence
+    to: verifying
+    condition: missing_evidence_supplied
+
+  - from: blocked
+    to: implementation
+    condition: implementation_retry_approved
+  - from: blocked
+    to: escalation
+    condition: requires_user_exception
+
+  - from: research
+    to: blocked_platform
+    condition: platform_error
+  - from: planning
+    to: blocked_platform
+    condition: platform_error
+  - from: implementation
+    to: blocked_platform
+    condition: platform_error
+  - from: verifying
+    to: blocked_platform
+    condition: platform_error
+  - from: build_rework
+    to: blocked_platform
+    condition: platform_error
+  - from: blocked_evidence
+    to: blocked_platform
+    condition: platform_error
+
+  - from: blocked_platform
+    to: research
+    condition: recovery_health_pass_and_previous_state == research
+  - from: blocked_platform
+    to: planning
+    condition: recovery_health_pass_and_previous_state == planning
+  - from: blocked_platform
+    to: implementation
+    condition: recovery_health_pass_and_previous_state == implementation
+  - from: blocked_platform
+    to: verifying
+    condition: recovery_health_pass_and_previous_state == verifying
+  - from: blocked_platform
+    to: build_rework
+    condition: recovery_health_pass_and_previous_state == build_rework
+  - from: blocked_platform
+    to: blocked_evidence
+    condition: recovery_health_pass_and_previous_state == blocked_evidence
+  - from: blocked_platform
+    to: escalation
+    condition: recovery_failed_or_caps_exceeded
+
+verify_gates:
+  research_to_plan:
+    required_checks:
+      - research_plan_alignment
+      - freshness
+  plan_to_build:
+    required_checks:
+      - acceptance_criteria
+      - permissions_scope
+  build_to_complete:
+    required_checks:
+      - plan_build_alignment
+      - evidence_integrity
+      - acceptance_criteria
+
+loop_controls:
+  max_iterations_per_phase:
+    research: 3
+    planning: 5
+    implementation: 8
+    verifying: 5
+    build_rework: 3
+    research_rework: 2
+    plan_rework: 2
+  max_tool_calls_per_phase:
+    research: 50
+    planning: 25
+    implementation: 120
+    verifying: 80
+  retry_caps_by_error_type:
+    verification_fail: 2
+    plan_blocker: 3
+    workflow_error: 3
+    platform_error: 3
+  heartbeat_policy:
+    interval_seconds: 30
+    stall_threshold_missed_beats: 3
+    on_stall: blocked_platform

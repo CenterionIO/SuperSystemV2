@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Logs/temp
+*.log
+tmp/
+
+# Node
+node_modules/
+
+# Runtime outputs
+runtime/

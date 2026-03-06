@@ -1,0 +1,20 @@
+{
+  "schema_version": "v1",
+  "plan_id": "ep_001",
+  "workflow_id": "wf_001",
+  "correlation_id": "corr_001",
+  "workflow_class": "code_change",
+  "autonomy_mode": "approve_final",
+  "criteria_ids": ["crit_001", "crit_002"],
+  "steps": [
+    {
+      "step_id": "step_001",
+      "description": "Add health-check endpoint.",
+      "criteria_ids": ["crit_001"],
+      "depends_on": [],
+      "required_tools": ["editor", "test_runner"]
+    }
+  ],
+  "risks": ["endpoint conflict"],
+  "assumptions": ["service framework supports route registration"]
+}
