@@ -12,6 +12,7 @@ def persist_outputs(
     root_dir: Path,
     correlation_id: str,
     *,
+    execution_plan: Dict[str, Any] | None = None,
     build_report: Dict[str, Any],
     verification_artifact: Dict[str, Any],
     trace_rows: Iterable[Dict[str, Any]],
@@ -23,6 +24,8 @@ def persist_outputs(
     evidence_dir = base / "evidence"
     evidence_dir.mkdir(parents=True, exist_ok=True)
 
+    if execution_plan is not None:
+        (base / "ExecutionPlan.json").write_text(json.dumps(execution_plan, indent=2) + "\n")
     (base / "BuildReport.json").write_text(json.dumps(build_report, indent=2) + "\n")
     (base / "VerificationArtifact.json").write_text(json.dumps(verification_artifact, indent=2) + "\n")
     (base / "policy_snapshot.json").write_text(json.dumps(policy_snapshot, indent=2) + "\n")

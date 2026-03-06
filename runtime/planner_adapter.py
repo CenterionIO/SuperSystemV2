@@ -23,7 +23,14 @@ def create_execution_plan(
     criteria = []
     for i, check in enumerate(required_checks, start=1):
         cid = f"crit_{i:03d}_{check}"
-        criteria.append({"criteria_id": cid, "description": f"Satisfy {check}", "required": True})
+        criteria.append(
+            {
+                "criteria_id": cid,
+                "check_type": check,
+                "description": f"Satisfy {check}",
+                "required": True,
+            }
+        )
         steps.append(
             {
                 "step_id": f"step_{i:03d}",
@@ -36,10 +43,11 @@ def create_execution_plan(
 
     plan = {
         "schema_version": "v1",
-        "execution_plan_id": f"plan_{workflow_id}",
+        "plan_id": f"plan_{workflow_id}",
         "workflow_id": workflow_id,
         "correlation_id": correlation_id,
         "workflow_class": workflow_class,
+        "autonomy_mode": "approve_final",
         "criteria_ids": [c["criteria_id"] for c in criteria],
         "steps": steps,
         "acceptance_criteria": criteria,

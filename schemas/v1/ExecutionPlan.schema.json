@@ -39,6 +39,20 @@
         "additionalProperties": false
       }
     },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criteria_id", "check_type", "description", "required"],
+        "properties": {
+          "criteria_id": { "type": "string" },
+          "check_type": { "type": "string" },
+          "description": { "type": "string" },
+          "required": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
     "risks": { "type": "array", "items": { "type": "string" } },
     "assumptions": { "type": "array", "items": { "type": "string" } }
   },

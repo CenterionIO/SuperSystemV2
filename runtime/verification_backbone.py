@@ -313,6 +313,7 @@ class VerificationBackbone:
                 persist_outputs(
                     self.root_dir,
                     correlation_id,
+                    execution_plan=request.get("execution_plan") if isinstance(request.get("execution_plan"), dict) else None,
                     build_report=request.get("build_report") or {"correlation_id": correlation_id, "status": overall_status},
                     verification_artifact=verification_artifact,
                     trace_rows=[

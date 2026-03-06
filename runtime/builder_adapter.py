@@ -26,7 +26,11 @@ def simulate_build(
     criteria_results = []
     artifacts = []
 
+    criteria_rows = list(plan.get("acceptance_criteria") or [])
     for i, check_type in enumerate(required_checks, start=1):
+        criteria_id = f"crit_{i:03d}_{check_type}"
+        if i - 1 < len(criteria_rows) and isinstance(criteria_rows[i - 1], dict):
+            criteria_id = str(criteria_rows[i - 1].get("criteria_id") or criteria_id)
         evidence_id = f"ev_{check_type}_{i:03d}"
         content = f"simulated artifact for {check_type}"
         artifact_path = run_inputs / f"artifact_{i:03d}.txt"
@@ -34,7 +38,7 @@ def simulate_build(
 
         criteria_results.append(
             {
-                "criteria_id": check_type,
+                "criteria_id": criteria_id,
                 "status": "pass",
                 "evidence_ids": [evidence_id],
             }
@@ -53,7 +57,7 @@ def simulate_build(
         "build_report_id": f"build_{workflow_id}",
         "workflow_id": workflow_id,
         "correlation_id": correlation_id,
-        "plan_id": str(plan.get("execution_plan_id", f"plan_{workflow_id}")),
+        "plan_id": str(plan.get("plan_id", f"plan_{workflow_id}")),
         "criteria_results": criteria_results,
         "artifacts": artifacts,
         "notes": "Simulated builder output",
