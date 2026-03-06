@@ -340,11 +340,68 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _detect_golden_format(doc: dict[str, Any]) -> str:
+    if isinstance(doc, dict):
+        if isinstance(doc.get('workflow_metadata'), dict) and isinstance(doc.get('state_trace'), dict) and isinstance(doc.get('artifacts'), dict):
+            return 'trace'
+        if isinstance(doc.get('verify_request'), dict) and isinstance(doc.get('expected'), dict):
+            return 'fixture'
+    return 'unknown'
+
+
+def _validate_golden_format_policy(errors: list[str]) -> str:
+    policy_path = ROOT / 'specs' / 'task5' / 'v1' / 'golden-path-format.json'
+    if not policy_path.exists():
+        errors.append(f'S5 format policy missing: {policy_path}')
+        return 'unknown'
+
+    policy = _load(policy_path)
+    allowed = policy.get('allowed_formats')
+    if not isinstance(allowed, list) or not allowed:
+        errors.append('S5 format policy: allowed_formats must be a non-empty array')
+        return 'unknown'
+    if 'trace' not in allowed or 'fixture' not in allowed:
+        errors.append('S5 format policy: allowed_formats must include trace and fixture')
+
+    declared = str(policy.get('sv2_format', '')).strip()
+    if declared not in allowed:
+        errors.append(f'S5 format policy: sv2_format must be one of {allowed}')
+        return 'unknown'
+
+    for name in ('code_change', 'mcp_tool'):
+        golden_path = ROOT / 'specs' / 'task5' / 'v1' / f'golden-path-{name.replace("_", "-")}.json'
+        if not golden_path.exists():
+            errors.append(f'S5 format policy: missing golden file {golden_path.name}')
+            continue
+        doc = _load(golden_path)
+        detected = _detect_golden_format(doc)
+        if detected != declared:
+            errors.append(f'S5 format mismatch [{name}]: declared={declared}, detected={detected}')
+            continue
+        if detected == 'fixture':
+            criteria = (doc.get('verify_request') or {}).get('criteria')
+            if not isinstance(criteria, list) or len(criteria) == 0:
+                errors.append(f'S5 fixture [{name}]: verify_request.criteria must be non-empty array')
+            expected = doc.get('expected')
+            if not isinstance(expected, dict):
+                errors.append(f'S5 fixture [{name}]: expected must be object')
+        elif detected == 'trace':
+            transitions = ((doc.get('state_trace') or {}).get('transitions'))
+            if not isinstance(transitions, list) or len(transitions) == 0:
+                errors.append(f'S5 trace [{name}]: state_trace.transitions must be non-empty array')
+            artifacts = doc.get('artifacts')
+            if not isinstance(artifacts, dict):
+                errors.append(f'S5 trace [{name}]: artifacts must be object')
+
+    return declared
+
+
 def main() -> int:
     args = _parse_args()
     errors: list[str] = []
 
     _check_execution_wiring(errors)
+    declared_format = _validate_golden_format_policy(errors)
     schemas = _load_schema_bundle(errors)
     if errors:
         print('Stage 5 gates: FAIL')
@@ -375,6 +432,7 @@ def main() -> int:
         return 1
 
     print('Stage 5 gates: PASS')
+    print(f'- golden path format: {declared_format}')
     print('- executable golden runs and/or targeted artifact validation')
     print('- schema and verify contract conformance')
     print('- criteria mapping plan -> build -> verification')

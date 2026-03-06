@@ -1,0 +1,17 @@
+{
+  "allowed_formats": ["trace", "fixture"],
+  "ss_format": "trace",
+  "sv2_format": "fixture",
+  "validation_rules": {
+    "trace": [
+      "must include workflow_metadata, state_trace, and artifacts",
+      "state_trace.transitions must align to deterministic flow checks",
+      "artifact chain and evidence linkage must be complete"
+    ],
+    "fixture": [
+      "must include verify_request and expected outcome",
+      "verify_request criteria/check references must be well-formed",
+      "runtime output artifacts are validated from CLI execution"
+    ]
+  }
+}
