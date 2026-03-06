@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StatusViewContract",
+  "type": "object",
+  "required": [
+    "correlation_id",
+    "current_state",
+    "last_transition_at",
+    "run_status",
+    "why",
+    "next_action"
+  ],
+  "properties": {
+    "correlation_id": { "type": "string" },
+    "current_state": { "type": "string" },
+    "last_transition_at": { "type": "string", "format": "date-time" },
+    "run_status": { "type": "string", "enum": ["running", "blocked"] },
+    "why": { "type": "string" },
+    "next_action": { "type": "string" }
+  },
+  "additionalProperties": false
+}

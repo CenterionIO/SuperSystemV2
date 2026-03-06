@@ -93,6 +93,7 @@ def main() -> int:
         'STAGE6_IMPLEMENTATION_MAP.md',
         'escalation-ui-contract.json',
         'autonomy-modes-policy.json',
+        'status-view-contract.json',
         'escalation-ui-contract.schema.json',
         'autonomy-modes-policy.schema.json',
         'validate-task6.py',
@@ -106,6 +107,7 @@ def main() -> int:
         autonomy_schema = _load(TASK6_DIR / 'autonomy-modes-policy.schema.json')
         escalation_doc = _load(TASK6_DIR / 'escalation-ui-contract.json')
         autonomy_doc = _load(TASK6_DIR / 'autonomy-modes-policy.json')
+        status_view_schema = _load(TASK6_DIR / 'status-view-contract.json')
 
         _validate_json_schema_subset(
             escalation_doc,
@@ -121,6 +123,39 @@ def main() -> int:
             'S6-3 autonomy-modes-policy',
             errors,
         )
+        _validate_json_schema_subset(
+            {
+                'correlation_id': 'corr-example',
+                'current_state': 'build_review',
+                'last_transition_at': '2026-03-06T00:00:00Z',
+                'run_status': 'running',
+                'why': 'awaiting verification',
+                'next_action': 'run verification gate',
+            },
+            status_view_schema,
+            status_view_schema.get('$defs', {}),
+            'S6-4 status-view-contract',
+            errors,
+        )
+        _validate_json_schema_subset(
+            {
+                'correlation_id': 'corr-example',
+                'current_state': 'escalation',
+                'last_transition_at': '2026-03-06T00:00:00Z',
+                'run_status': 'blocked',
+                'why': 'missing required evidence linkage',
+                'next_action': 'review escalation prompt',
+            },
+            status_view_schema,
+            status_view_schema.get('$defs', {}),
+            'S6-4 status-view-contract',
+            errors,
+        )
+        status_enum = (
+            (status_view_schema.get('properties') or {}).get('run_status') or {}
+        ).get('enum', [])
+        if sorted(status_enum) != ['blocked', 'running']:
+            errors.append('S6-4 status-view-contract run_status enum must be [running, blocked]')
 
         required_modes = ['approve_each', 'approve_final', 'full_auto']
         for mode in required_modes:
@@ -138,10 +173,10 @@ def main() -> int:
             actions = ((autonomy_doc.get('modes') or {}).get(mode) or {}).get('escalation_actions', [])
             for action in actions:
                 if action not in ui_actions:
-                    errors.append(f'S6-4 action mismatch: {mode} references unknown escalation action {action}')
+                    errors.append(f'S6-5 action mismatch: {mode} references unknown escalation action {action}')
 
         if escalation_doc.get('version') != 'v1' or autonomy_doc.get('version') != 'v1':
-            errors.append('S6-5 fail-closed: contract version must be v1')
+            errors.append('S6-6 fail-closed: contract version must be v1')
 
     if errors:
         print('Stage 6 gates: FAIL')
@@ -153,8 +188,9 @@ def main() -> int:
     print('- S6-1: presence gate')
     print('- S6-2: escalation contract schema gate')
     print('- S6-3: autonomy policy schema gate')
-    print('- S6-4: cross-contract consistency gate')
-    print('- S6-5: CI fail-closed gate')
+    print('- S6-4: status view contract gate')
+    print('- S6-5: cross-contract consistency gate')
+    print('- S6-6: CI fail-closed gate')
     return 0
 
 
