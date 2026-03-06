@@ -104,6 +104,36 @@ class VerificationBackbone:
             except Exception as exc:
                 return {"status": "blocked", "message": f"plugin error for check_type={check_type}: {exc}"}
 
+    def _build_artifact_lookup(self, request: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        build_report = request.get("build_report")
+        artifacts = build_report.get("artifacts", []) if isinstance(build_report, dict) else []
+        lookup: Dict[str, Dict[str, Any]] = {}
+        for row in artifacts:
+            if not isinstance(row, dict):
+                continue
+            evidence_id = str(row.get("evidence_id", "")).strip()
+            if not evidence_id:
+                continue
+            raw_path = str(row.get("path", "")).strip()
+            canonical_path = raw_path
+            size_bytes = 0
+            if raw_path:
+                path_obj = Path(raw_path)
+                if not path_obj.is_absolute():
+                    path_obj = (self.root_dir / raw_path).resolve()
+                else:
+                    path_obj = path_obj.resolve()
+                canonical_path = str(path_obj)
+                if path_obj.exists() and path_obj.is_file():
+                    size_bytes = int(path_obj.stat().st_size)
+            lookup[evidence_id] = {
+                "evidence_id": evidence_id,
+                "canonical_path": canonical_path,
+                "sha256": str(row.get("sha256", "")),
+                "size_bytes": size_bytes,
+            }
+        return lookup
+
     def run(self, job_id: str, domain: str, request: Dict[str, Any]) -> Dict[str, Any]:
         subject = request.get("subject", {}) or {}
         workflow_class = str(request.get("workflow_class") or subject.get("workflow_class") or "").strip()
@@ -154,6 +184,8 @@ class VerificationBackbone:
 
         seen_required: set[str] = set()
         artifact_checks: list[dict[str, Any]] = []
+        referenced_evidence_ids: set[str] = set()
+        artifact_lookup = self._build_artifact_lookup(request)
 
         for idx, raw in enumerate(criteria_input):
             item = raw if isinstance(raw, dict) else {}
@@ -164,6 +196,7 @@ class VerificationBackbone:
             message = str(item.get("message") or "")
             refs = item.get("evidence_refs") if isinstance(item.get("evidence_refs"), list) else []
             refs = [str(r) for r in refs]
+            referenced_evidence_ids.update(refs)
 
             if required and check_type:
                 seen_required.add(check_type)
@@ -192,6 +225,7 @@ class VerificationBackbone:
                         "required": required,
                         "status": "blocked",
                         "message": "unsupported check_type",
+                        "evidence_refs": refs,
                     }
                 )
                 continue
@@ -232,19 +266,9 @@ class VerificationBackbone:
                     "required": required,
                     "status": effective_status,
                     "message": message,
+                    "evidence_refs": refs,
                 }
             )
-
-            for ref in refs:
-                evidence.append(
-                    {
-                        "id": ref,
-                        "source_type": "registry",
-                        "source": "evidence-registry",
-                        "excerpt": check_id,
-                        "timestamp": self._now_iso(),
-                    }
-                )
 
             if effective_status in {"blocked", "fail", "warn"}:
                 findings.append(
@@ -274,6 +298,7 @@ class VerificationBackbone:
                     "required": True,
                     "status": "blocked",
                     "message": "required check missing",
+                    "evidence_refs": [],
                 }
             )
             findings.append(
@@ -283,6 +308,27 @@ class VerificationBackbone:
                     "claim": missing,
                     "reason": f"Required check not supplied: {missing}",
                     "evidence_refs": [],
+                }
+            )
+
+        for evidence_id in sorted(referenced_evidence_ids):
+            meta = artifact_lookup.get(
+                evidence_id,
+                {
+                    "evidence_id": evidence_id,
+                    "canonical_path": "",
+                    "sha256": "",
+                    "size_bytes": 0,
+                },
+            )
+            evidence.append(
+                {
+                    "evidence_id": evidence_id,
+                    "canonical_path": str(meta.get("canonical_path", "")),
+                    "sha256": str(meta.get("sha256", "")),
+                    "size_bytes": int(meta.get("size_bytes", 0)),
+                    "produced_by": "builder_adapter",
+                    "produced_at": self._now_iso(),
                 }
             )
 

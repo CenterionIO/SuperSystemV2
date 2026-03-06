@@ -23,13 +23,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["check_id", "check_type", "required", "status"],
+        "required": ["check_id", "check_type", "required", "status", "evidence_refs"],
         "properties": {
           "check_id": { "type": "string" },
           "check_type": { "type": "string" },
           "required": { "type": "boolean" },
           "status": { "type": "string", "enum": ["pass", "warn", "fail", "blocked"] },
-          "message": { "type": "string" }
+          "message": { "type": "string" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } }
         },
         "additionalProperties": false
       }

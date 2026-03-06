@@ -170,15 +170,38 @@ def _validate_artifact_bundle(
 
     # Evidence registry id format checks.
     evidence_dir = out_dir / 'evidence'
+    evidence_ids: set[str] = set()
     if not evidence_dir.exists():
         errors.append(f'{context}: missing evidence dir')
     else:
         id_prefix = str(evidence_registry.get('id_format', 'ev_')).split('{', 1)[0]
         for path in sorted(evidence_dir.glob('*.json')):
             row = _load(path)
-            eid = str(row.get('id', ''))
+            missing_fields = [f for f in ('evidence_id', 'canonical_path', 'sha256', 'size_bytes') if f not in row]
+            if missing_fields:
+                errors.append(f'{context}: evidence record missing fields {missing_fields} in {path.name}')
+            eid = str(row.get('evidence_id', ''))
+            evidence_ids.add(eid)
             if not eid.startswith(id_prefix):
                 errors.append(f'{context}: evidence id_format violation {eid}')
+            if not isinstance(row.get('canonical_path', ''), str) or not str(row.get('canonical_path', '')).strip():
+                errors.append(f'{context}: evidence canonical_path invalid for {eid}')
+            if not isinstance(row.get('sha256', ''), str) or not str(row.get('sha256', '')).strip():
+                errors.append(f'{context}: evidence sha256 invalid for {eid}')
+            if not isinstance(row.get('size_bytes', 0), int) or int(row.get('size_bytes', -1)) < 0:
+                errors.append(f'{context}: evidence size_bytes invalid for {eid}')
+
+    for check in verification_artifact.get('checks', []):
+        if not isinstance(check, dict):
+            continue
+        check_id = str(check.get('check_id', ''))
+        refs = check.get('evidence_refs')
+        if not isinstance(refs, list):
+            errors.append(f'{context}: verification check missing evidence_refs for {check_id}')
+            continue
+        for ref in refs:
+            if str(ref) not in evidence_ids:
+                errors.append(f'{context}: check {check_id} references unknown evidence_id {ref}')
 
     # Trace checks.
     trace_lines = [line for line in (out_dir / 'trace.jsonl').read_text().splitlines() if line.strip()]
