@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "semver_policy": {
+    "major": "breaking contract/schema/runtime behavior changes",
+    "minor": "backward-compatible feature additions",
+    "patch": "backward-compatible fixes"
+  },
+  "backward_compat_window": {
+    "min_supported_minor_versions": 2,
+    "deprecation_notice_days": 30
+  },
+  "migration_strategy": {
+    "mode": "explicit_migrations",
+    "requires_migration_plan": true,
+    "rollback_supported": true
+  }
+}

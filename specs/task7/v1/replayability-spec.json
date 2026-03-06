@@ -1,0 +1,21 @@
+{
+  "version": "v1",
+  "required_artifacts": [
+    "ExecutionPlan.json",
+    "BuildReport.json",
+    "VerificationArtifact.json",
+    "manifest.json",
+    "request.json",
+    "policy_snapshot.json",
+    "trace.jsonl"
+  ],
+  "replay_inputs": {
+    "required": ["request", "policy_snapshot", "autonomy_mode", "workflow_class"],
+    "optional": ["seed", "runtime_flags"]
+  },
+  "determinism_requirements": {
+    "stable_evidence_ids": true,
+    "stable_artifact_paths": true,
+    "stable_gate_outcomes_given_same_inputs": true
+  }
+}

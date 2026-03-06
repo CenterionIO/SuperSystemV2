@@ -1,0 +1,18 @@
+{
+  "version": "v1",
+  "required_workflows": [
+    "stage-gates",
+    "policy-validation",
+    "schema-validation"
+  ],
+  "required_commands": [
+    "python3 specs/task6/v1/validate-task6.py",
+    "python3 specs/task7/v1/validate-task7.py",
+    "zsh tools/run_all_gates.sh"
+  ],
+  "fail_conditions": [
+    "missing_required_workflow",
+    "missing_required_command",
+    "nonzero_validator_exit"
+  ]
+}

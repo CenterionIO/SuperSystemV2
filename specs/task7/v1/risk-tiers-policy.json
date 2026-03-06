@@ -1,0 +1,18 @@
+{
+  "version": "v1",
+  "tiers": ["low", "med", "high"],
+  "tier_rules": {
+    "low": {
+      "autonomy": "full_auto",
+      "required_gates": ["research_review", "plan_review", "build_review"]
+    },
+    "med": {
+      "autonomy": "approve_final",
+      "required_gates": ["plan_review", "build_review"]
+    },
+    "high": {
+      "autonomy": "approve_each",
+      "required_gates": ["research_review", "plan_review", "build_review", "escalation_review"]
+    }
+  }
+}
