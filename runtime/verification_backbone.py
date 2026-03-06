@@ -8,16 +8,19 @@ canonical verification outputs with fail-closed behavior.
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
+from runtime.artifact_store import persist_outputs
 from runtime.policy_engine import (
     PolicyBundle,
     apply_fail_closed,
     normalize_status,
 )
+from runtime.spec_loader import RuntimeSpecBundle, load_runtime_spec_bundle
 
 
 @dataclass(frozen=True)
@@ -31,7 +34,10 @@ class VerificationBackbone:
     def __init__(self, root_dir: Path, policy_bundle: PolicyBundle) -> None:
         self.root_dir = root_dir
         self.bundle = policy_bundle
+        self.spec_bundle: RuntimeSpecBundle = load_runtime_spec_bundle(root_dir)
         self.specs = self._load_specs(root_dir)
+        self.max_criteria_per_request = int(self.spec_bundle.config.limits.get("max_criteria_per_request", 200))
+        self.plugin_registry = self._build_plugin_registry()
 
     @staticmethod
     def _load_json(path: Path) -> Dict[str, Any]:
@@ -44,6 +50,18 @@ class VerificationBackbone:
             plugin_abi=self._load_json(base / "verifier-plugin-abi.json"),
             evidence_registry=self._load_json(base / "evidence-registry.json"),
         )
+
+    def _build_plugin_registry(self) -> Dict[str, Dict[str, Any]]:
+        timeout_default = int(self.specs.plugin_abi.get("timeout_policy", {}).get("default_timeout_ms", 30000))
+        caps = self.specs.plugin_abi.get("capability_flags", {})
+        registry: Dict[str, Dict[str, Any]] = {}
+        for check_type in self.specs.engine.get("supported_check_types", []):
+            registry[str(check_type)] = {
+                "handler": self._default_plugin_handler,
+                "timeout_ms": timeout_default,
+                "capabilities": caps,
+            }
+        return registry
 
     @staticmethod
     def _now_iso() -> str:
@@ -66,6 +84,25 @@ class VerificationBackbone:
             if not isinstance(ref, str) or not ref.startswith(prefix):
                 bad.append(str(ref))
         return bad
+
+    @staticmethod
+    def _default_plugin_handler(item: Dict[str, Any]) -> Dict[str, Any]:
+        # Deterministic stub plugin: accepts declared status from criteria payload.
+        return {"status": str(item.get("status", "blocked")), "message": str(item.get("message", ""))}
+
+    def _run_plugin_with_timeout(self, check_type: str, item: Dict[str, Any]) -> Dict[str, Any]:
+        plugin = self.plugin_registry.get(check_type)
+        if not plugin:
+            return {"status": "blocked", "message": f"plugin not found for check_type={check_type}"}
+        timeout_s = max(0.001, float(plugin["timeout_ms"]) / 1000.0)
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            fut = ex.submit(plugin["handler"], item)
+            try:
+                return fut.result(timeout=timeout_s)
+            except TimeoutError:
+                return {"status": "blocked", "message": f"plugin timeout for check_type={check_type}"}
+            except Exception as exc:
+                return {"status": "blocked", "message": f"plugin error for check_type={check_type}: {exc}"}
 
     def run(self, job_id: str, domain: str, request: Dict[str, Any]) -> Dict[str, Any]:
         subject = request.get("subject", {}) or {}
@@ -99,6 +136,21 @@ class VerificationBackbone:
         criteria_input = request.get("criteria") or subject.get("criteria") or []
         if not isinstance(criteria_input, list):
             criteria_input = []
+        if len(criteria_input) > self.max_criteria_per_request:
+            return {
+                "job_id": job_id,
+                "domain": domain,
+                "overall_status": "blocked",
+                "summary": f"criteria length exceeds cap: {len(criteria_input)}>{self.max_criteria_per_request}",
+                "checks_run": [{"check_id": "criteria_cap", "status": "blocked", "reason": "criteria count exceeds cap"}],
+                "findings": [],
+                "evidence": [],
+                "tool_trace": [],
+                "verification_artifact": None,
+                "verifier_version": "mcp-verify-orchestrator@v1",
+                "policy_version": "v1",
+                "timestamp": self._now_iso(),
+            }
 
         seen_required: set[str] = set()
         artifact_checks: list[dict[str, Any]] = []
@@ -144,8 +196,9 @@ class VerificationBackbone:
                 )
                 continue
 
+            plugin_result = self._run_plugin_with_timeout(check_type, item)
             bad_refs = self._validate_evidence_refs(refs)
-            status = normalize_status(input_status)
+            status = normalize_status(plugin_result.get("status", input_status))
             if bad_refs:
                 status = "blocked"
                 findings.append(
@@ -169,7 +222,7 @@ class VerificationBackbone:
                 {
                     "check_id": check_id,
                     "status": effective_status,
-                    "reason": message or f"{check_type} -> {effective_status}",
+                    "reason": plugin_result.get("message") or message or f"{check_type} -> {effective_status}",
                 }
             )
             artifact_checks.append(
@@ -256,6 +309,30 @@ class VerificationBackbone:
         }
 
         return {
+            "_persisted_out_dir": str(
+                persist_outputs(
+                    self.root_dir,
+                    correlation_id,
+                    build_report=request.get("build_report") or {"correlation_id": correlation_id, "status": overall_status},
+                    verification_artifact=verification_artifact,
+                    trace_rows=[
+                        {
+                            "job_id": job_id,
+                            "domain": domain,
+                            "overall_status": overall_status,
+                            "timestamp": self._now_iso(),
+                        }
+                    ],
+                    policy_snapshot={
+                        "workflow_taxonomy_version": self.bundle.workflow_taxonomy.get("version"),
+                        "routing_policy_version": self.bundle.routing_policy.get("version"),
+                        "permissions_policy_version": self.bundle.permissions_policy.get("version"),
+                        "override_policy_version": self.bundle.override_policy.get("version"),
+                    },
+                    request_snapshot=request,
+                    evidence_rows=evidence,
+                )
+            ),
             "job_id": job_id,
             "domain": domain,
             "overall_status": overall_status,

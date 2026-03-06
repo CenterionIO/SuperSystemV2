@@ -1,0 +1,19 @@
+{
+  "version": "v1",
+  "required_report_fields": [
+    "report_id",
+    "golden_path_id",
+    "workflow_class",
+    "validated_at",
+    "overall_result",
+    "checks"
+  ],
+  "required_checks": [
+    "schema_conformance",
+    "evidence_trace_completeness",
+    "artifact_output_completeness",
+    "deterministic_status",
+    "fail_closed_integrity"
+  ],
+  "overall_result_enum": ["conformant", "non_conformant"]
+}

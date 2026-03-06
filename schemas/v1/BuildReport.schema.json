@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "supersystem/schemas/v1/BuildReport",
+  "title": "BuildReport",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "build_report_id",
+    "workflow_id",
+    "correlation_id",
+    "plan_id",
+    "criteria_results",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "v1" },
+    "build_report_id": { "type": "string" },
+    "workflow_id": { "type": "string" },
+    "correlation_id": { "type": "string" },
+    "plan_id": { "type": "string" },
+    "criteria_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criteria_id", "status", "evidence_ids"],
+        "properties": {
+          "criteria_id": { "type": "string" },
+          "status": { "type": "string", "enum": ["pass", "warn", "fail", "blocked"] },
+          "evidence_ids": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "kind", "path", "sha256"],
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "kind": { "type": "string" },
+          "path": { "type": "string" },
+          "sha256": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": false
+}

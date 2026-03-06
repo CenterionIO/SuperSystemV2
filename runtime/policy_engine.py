@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
 
+from runtime.spec_loader import load_runtime_spec_bundle
+
 CANONICAL_STATUSES = {"pass", "warn", "fail", "blocked"}
 
 
@@ -30,12 +32,14 @@ def _load_json(path: Path) -> Dict[str, Any]:
 
 
 def load_policy_bundle(base_dir: Path) -> PolicyBundle:
-    policy_dir = base_dir / "policy" / "v1"
+    # Centralized spec loader enforces version pinning/fail-closed semantics.
+    spec_bundle = load_runtime_spec_bundle(base_dir)
+    policy = spec_bundle.policy
     return PolicyBundle(
-        workflow_taxonomy=_load_json(policy_dir / "workflow_taxonomy.json"),
-        routing_policy=_load_json(policy_dir / "routing_policy.json"),
-        permissions_policy=_load_json(policy_dir / "permissions_policy.json"),
-        override_policy=_load_json(policy_dir / "override_policy.json"),
+        workflow_taxonomy=policy["workflow_taxonomy"],
+        routing_policy=policy["routing_policy"],
+        permissions_policy=policy["permissions_policy"],
+        override_policy=policy["override_policy"],
     )
 
 
@@ -103,4 +107,3 @@ def next_state_for_verification(
     if effective == "fail":
         return route["rework_routes"]["verification_fail"]
     return route["blocked_evidence_route"]
-

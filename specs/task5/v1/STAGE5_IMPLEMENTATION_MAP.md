@@ -14,8 +14,11 @@ Status: in progress
 1. `runtime/verification_backbone.py`
 2. `mcp_verify_orchestrator.py` wiring for non-truth domains
 3. `tools/runtime_verification_backbone_smoke.py`
-4. `specs/task5/v1/validate_task5.py`
-5. `specs/task5/v1/run_task5_gates.sh`
+4. `specs/task5/v1/golden-path-code-change.json`
+5. `specs/task5/v1/golden-path-mcp-tool.json`
+6. `specs/task5/v1/conformance-report-spec.json`
+7. `specs/task5/v1/validate_task5.py`
+8. `specs/task5/v1/run_task5_gates.sh`
 
 ## Gates
 

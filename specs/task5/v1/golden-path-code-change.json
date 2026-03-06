@@ -1,0 +1,31 @@
+{
+  "id": "golden_code_change_v1",
+  "workflow_class": "code_change",
+  "verify_request": {
+    "job_id": "golden-code-change-job",
+    "domain": "plan",
+    "workflow_class": "code_change",
+    "correlation_id": "golden-code-change-corr",
+    "criteria": [
+      {"check_id": "cc1", "check_type": "acceptance_criteria", "status": "pass", "required": true, "evidence_refs": ["ev_cc_001"]},
+      {"check_id": "cc2", "check_type": "plan_build_alignment", "status": "pass", "required": true, "evidence_refs": ["ev_cc_002"]},
+      {"check_id": "cc3", "check_type": "evidence_integrity", "status": "pass", "required": true, "evidence_refs": ["ev_cc_003"]},
+      {"check_id": "cc4", "check_type": "permissions_scope", "status": "pass", "required": true, "evidence_refs": ["ev_cc_004"]}
+    ],
+    "build_report": {
+      "correlation_id": "golden-code-change-corr",
+      "status": "complete",
+      "summary": "Golden build report for code_change"
+    }
+  },
+  "expected": {
+    "overall_status": "pass",
+    "required_output_files": [
+      "BuildReport.json",
+      "VerificationArtifact.json",
+      "trace.jsonl",
+      "policy_snapshot.json",
+      "request.json"
+    ]
+  }
+}

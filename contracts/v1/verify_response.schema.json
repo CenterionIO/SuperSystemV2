@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VerifyResponse",
+  "type": "object",
+  "required": ["job_id", "domain", "overall_status", "summary", "checks_run", "timestamp"],
+  "properties": {
+    "job_id": {"type": "string"},
+    "domain": {"type": "string"},
+    "overall_status": {"type": "string", "enum": ["pass", "warn", "fail", "blocked"]},
+    "summary": {"type": "string"},
+    "checks_run": {"type": "array"},
+    "findings": {"type": "array"},
+    "evidence": {"type": "array"},
+    "tool_trace": {"type": "array"},
+    "verification_artifact": {
+      "type": ["object", "null"],
+      "properties": {
+        "schema_version": {"type": "string"},
+        "verification_id": {"type": "string"},
+        "workflow_id": {"type": "string"},
+        "correlation_id": {"type": "string"},
+        "verifier_version": {"type": "string"},
+        "checks": {"type": "array"},
+        "overall_status": {"type": "string", "enum": ["pass", "warn", "fail", "blocked"]},
+        "fail_closed": {"type": "boolean"}
+      },
+      "required": ["schema_version", "verification_id", "workflow_id", "correlation_id", "verifier_version", "checks", "overall_status", "fail_closed"],
+      "additionalProperties": true
+    },
+    "verifier_version": {"type": "string"},
+    "policy_version": {"type": "string"},
+    "timestamp": {"type": "string"}
+  },
+  "additionalProperties": true
+}

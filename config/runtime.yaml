@@ -1,0 +1,12 @@
+versions:
+  specs_task1: v1
+  policy: v1
+  schemas: v1
+  contracts: v1
+paths:
+  specs_task1: specs/task1/v1
+  policy: policy/v1
+  schemas: schemas/v1
+  contracts: contracts/v1
+limits:
+  max_criteria_per_request: 200

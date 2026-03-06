@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VerifyRequest",
+  "type": "object",
+  "required": ["job_id", "domain", "workflow_class", "criteria"],
+  "properties": {
+    "job_id": {"type": "string"},
+    "domain": {"type": "string", "enum": ["truth", "plan", "research", "ui", "api", "custom"]},
+    "workflow_class": {"type": "string", "enum": ["code_change", "mcp_tool", "research_only", "transcription", "ui_change", "ops_fix"]},
+    "correlation_id": {"type": "string"},
+    "has_exception_artifact": {"type": "boolean"},
+    "criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["check_id", "check_type", "status"],
+        "properties": {
+          "check_id": {"type": "string"},
+          "check_type": {"type": "string"},
+          "status": {"type": "string", "enum": ["pass", "warn", "fail", "blocked"]},
+          "required": {"type": "boolean"},
+          "message": {"type": "string"},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "subject": {"type": "object"}
+  },
+  "additionalProperties": true
+}

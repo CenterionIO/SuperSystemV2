@@ -1,0 +1,12 @@
+[project]
+name = "supersystemv2"
+version = "0.1.0"
+description = "SuperSystemV2 runtime"
+requires-python = ">=3.10"
+
+[project.scripts]
+supersystemv2 = "cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

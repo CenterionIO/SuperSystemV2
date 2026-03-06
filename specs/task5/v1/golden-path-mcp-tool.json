@@ -1,0 +1,31 @@
+{
+  "id": "golden_mcp_tool_v1",
+  "workflow_class": "mcp_tool",
+  "verify_request": {
+    "job_id": "golden-mcp-tool-job",
+    "domain": "api",
+    "workflow_class": "mcp_tool",
+    "correlation_id": "golden-mcp-tool-corr",
+    "criteria": [
+      {"check_id": "mt1", "check_type": "acceptance_criteria", "status": "pass", "required": true, "evidence_refs": ["ev_mt_001"]},
+      {"check_id": "mt2", "check_type": "plan_build_alignment", "status": "pass", "required": true, "evidence_refs": ["ev_mt_002"]},
+      {"check_id": "mt3", "check_type": "permissions_scope", "status": "pass", "required": true, "evidence_refs": ["ev_mt_003"]},
+      {"check_id": "mt4", "check_type": "evidence_integrity", "status": "pass", "required": true, "evidence_refs": ["ev_mt_004"]}
+    ],
+    "build_report": {
+      "correlation_id": "golden-mcp-tool-corr",
+      "status": "complete",
+      "summary": "Golden build report for mcp_tool"
+    }
+  },
+  "expected": {
+    "overall_status": "pass",
+    "required_output_files": [
+      "BuildReport.json",
+      "VerificationArtifact.json",
+      "trace.jsonl",
+      "policy_snapshot.json",
+      "request.json"
+    ]
+  }
+}

@@ -25,11 +25,18 @@ from runtime.policy_engine import (
     load_policy_bundle as _load_policy_bundle,
     next_state_for_verification as _next_state_for_verification,
 )
+from runtime.schema_checks import (
+    SchemaValidationError as _SchemaValidationError,
+    validate_verify_request as _validate_verify_request,
+    validate_verify_response as _validate_verify_response,
+)
+from runtime.spec_loader import SpecVersionError as _SpecVersionError, load_runtime_spec_bundle as _load_runtime_spec_bundle
 from runtime.verification_backbone import VerificationBackbone
 
 server = FastMCP("mcp-verify-orchestrator")
 _POLICY_BUNDLE = _load_policy_bundle(Path(__file__).resolve().parent)
 _VERIFY_ROLE = "VerifyMCP"
+_SPEC_BUNDLE = _load_runtime_spec_bundle(Path(__file__).resolve().parent)
 _VERIFICATION_BACKBONE = VerificationBackbone(Path(__file__).resolve().parent, _POLICY_BUNDLE)
 
 
@@ -434,6 +441,43 @@ def verify_run(request_json: str) -> str:
             indent=2,
         )
 
+    try:
+        _validate_verify_request(request)
+    except _SchemaValidationError as exc:
+        return json.dumps(
+            {
+                "job_id": str(request.get("job_id", "unknown")),
+                "domain": str(request.get("domain", "unknown")),
+                "overall_status": "blocked",
+                "summary": f"Schema validation failed: {exc}",
+                "checks_run": [{"check_id": "schema_validation", "status": "blocked", "reason": str(exc)}],
+                "findings": [],
+                "evidence": [],
+                "tool_trace": [],
+                "verifier_version": "mcp-verify-orchestrator@v1",
+                "policy_version": "v1",
+                "timestamp": _now_iso(),
+            },
+            indent=2,
+        )
+    except _SpecVersionError as exc:
+        return json.dumps(
+            {
+                "job_id": str(request.get("job_id", "unknown")),
+                "domain": str(request.get("domain", "unknown")),
+                "overall_status": "blocked",
+                "summary": f"Spec version mismatch: {exc}",
+                "checks_run": [{"check_id": "spec_version", "status": "blocked", "reason": str(exc)}],
+                "findings": [],
+                "evidence": [],
+                "tool_trace": [],
+                "verifier_version": "mcp-verify-orchestrator@v1",
+                "policy_version": "v1",
+                "timestamp": _now_iso(),
+            },
+            indent=2,
+        )
+
     job_id = request.get("job_id", "unknown")
     domain = request.get("domain", "truth")
 
@@ -441,10 +485,44 @@ def verify_run(request_json: str) -> str:
         return json.dumps(_blocked_result(job_id, domain, f"Unknown verification domain: {domain}"), indent=2)
 
     if domain == "truth":
-        return json.dumps(_truth_v1(job_id, request), indent=2)
+        response = _truth_v1(job_id, request)
+        try:
+            _validate_verify_response(response)
+        except _SchemaValidationError as exc:
+            response = {
+                "job_id": str(job_id),
+                "domain": "truth",
+                "overall_status": "blocked",
+                "summary": f"Response schema validation failed: {exc}",
+                "checks_run": [{"check_id": "response_schema", "status": "blocked", "reason": str(exc)}],
+                "findings": [],
+                "evidence": [],
+                "tool_trace": [],
+                "verifier_version": "mcp-verify-orchestrator@v1",
+                "policy_version": "v1",
+                "timestamp": _now_iso(),
+            }
+        return json.dumps(response, indent=2)
 
     # Stage 5: use verification backbone for non-truth domains.
-    return json.dumps(_VERIFICATION_BACKBONE.run(job_id, domain, request), indent=2)
+    response = _VERIFICATION_BACKBONE.run(job_id, domain, request)
+    try:
+        _validate_verify_response(response)
+    except _SchemaValidationError as exc:
+        response = {
+            "job_id": str(job_id),
+            "domain": domain,
+            "overall_status": "blocked",
+            "summary": f"Response schema validation failed: {exc}",
+            "checks_run": [{"check_id": "response_schema", "status": "blocked", "reason": str(exc)}],
+            "findings": [],
+            "evidence": [],
+            "tool_trace": [],
+            "verifier_version": "mcp-verify-orchestrator@v1",
+            "policy_version": "v1",
+            "timestamp": _now_iso(),
+        }
+    return json.dumps(response, indent=2)
 
 
 if __name__ == "__main__":
