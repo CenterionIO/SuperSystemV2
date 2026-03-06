@@ -7,6 +7,7 @@
     "retention_days",
     "immutable_artifacts",
     "redaction_levels",
+    "redaction_methods",
     "pii_field_patterns",
     "secrets_field_patterns",
     "audit_log_scope"
@@ -21,21 +22,40 @@
     },
     "redaction_levels": {
       "type": "array",
-      "items": { "type": "string" },
-      "minItems": 1
+      "items": { "type": "string", "enum": ["none", "standard", "strict"] },
+      "minItems": 3
+    },
+    "redaction_methods": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["mask", "hash", "drop"] },
+      "minItems": 3
     },
     "pii_field_patterns": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": { "type": "string" },
+      "minItems": 1
     },
     "secrets_field_patterns": {
       "type": "array",
-      "items": { "type": "string" }
-    },
-    "audit_log_scope": {
-      "type": "array",
       "items": { "type": "string" },
       "minItems": 1
+    },
+    "audit_log_scope": {
+      "type": "object",
+      "required": ["include_events", "exclude_fields"],
+      "properties": {
+        "include_events": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "exclude_fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

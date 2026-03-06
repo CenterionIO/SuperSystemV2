@@ -1,17 +1,13 @@
 {
   "version": "v1",
-  "retention_days": 30,
+  "retention_days": 90,
   "immutable_artifacts": [
     "VerificationArtifact.json",
     "manifest.json",
     "trace.jsonl"
   ],
-  "redaction_levels": [
-    "none",
-    "mask",
-    "hash",
-    "drop"
-  ],
+  "redaction_levels": ["none", "standard", "strict"],
+  "redaction_methods": ["mask", "hash", "drop"],
   "pii_field_patterns": [
     "request.subject.email",
     "request.subject.phone",
@@ -22,11 +18,20 @@
     "request.subject.access_token",
     "request.subject.password"
   ],
-  "audit_log_scope": [
-    "verify_start",
-    "verify_complete",
-    "escalation_prompt",
-    "escalation_response",
-    "proof_run"
-  ]
+  "audit_log_scope": {
+    "include_events": [
+      "verify_start",
+      "verify_complete",
+      "escalation_prompt",
+      "escalation_response",
+      "proof_run"
+    ],
+    "exclude_fields": [
+      "api_key",
+      "access_token",
+      "password",
+      "secret",
+      "private_key"
+    ]
+  }
 }

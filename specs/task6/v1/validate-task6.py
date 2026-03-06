@@ -134,6 +134,27 @@ def main() -> int:
             'S6-5 security-retention-redaction-policy',
             errors,
         )
+
+        # S6-5: audit_log_scope must have include_events and exclude_fields
+        als = secops_doc.get('audit_log_scope')
+        if isinstance(als, dict):
+            if not isinstance(als.get('include_events'), list) or len(als.get('include_events', [])) == 0:
+                errors.append('S6-5 audit_log_scope.include_events must be a non-empty array')
+            if not isinstance(als.get('exclude_fields'), list) or len(als.get('exclude_fields', [])) == 0:
+                errors.append('S6-5 audit_log_scope.exclude_fields must be a non-empty array')
+            # secrets_field_patterns must be a subset of exclude_fields (base name match)
+            exclude_set = set(als.get('exclude_fields', []))
+            for pat in secops_doc.get('secrets_field_patterns', []):
+                base = pat.rsplit('.', 1)[-1] if '.' in pat else pat
+                if base not in exclude_set:
+                    errors.append(f"S6-5 secrets pattern '{pat}' (base '{base}') not in audit_log_scope.exclude_fields")
+        elif not isinstance(als, dict):
+            errors.append('S6-5 audit_log_scope must be an object')
+
+        # S6-5: redaction_levels must be exactly [none, standard, strict]
+        rl = secops_doc.get('redaction_levels', [])
+        if sorted(rl) != ['none', 'standard', 'strict']:
+            errors.append('S6-5 redaction_levels must be [none, standard, strict]')
         _validate_json_schema_subset(
             {
                 'correlation_id': 'corr-example',
@@ -234,6 +255,33 @@ def main() -> int:
             for action in actions:
                 if action not in ui_actions:
                     errors.append(f'S6-5 action mismatch: {mode} references unknown escalation action {action}')
+
+        # Security/retention/redaction canonical shape checks.
+        expected_levels = ['none', 'standard', 'strict']
+        redaction_levels = secops_doc.get('redaction_levels')
+        if redaction_levels != expected_levels:
+            errors.append('S6-5 redaction_levels must equal ["none","standard","strict"] in order')
+
+        if 'redaction_methods' in secops_doc:
+            methods = secops_doc.get('redaction_methods')
+            if not isinstance(methods, list):
+                errors.append('S6-5 redaction_methods must be an array when provided')
+            else:
+                allowed = {'mask', 'hash', 'drop'}
+                invalid = [m for m in methods if m not in allowed]
+                if invalid:
+                    errors.append(f'S6-5 redaction_methods contains invalid values: {invalid}')
+
+        scope = secops_doc.get('audit_log_scope')
+        if not isinstance(scope, dict):
+            errors.append('S6-5 audit_log_scope must be an object')
+        else:
+            include_events = scope.get('include_events')
+            exclude_fields = scope.get('exclude_fields')
+            if not isinstance(include_events, list) or not include_events or not all(isinstance(x, str) and x.strip() for x in include_events):
+                errors.append('S6-5 audit_log_scope.include_events must be a non-empty string array')
+            if not isinstance(exclude_fields, list) or not exclude_fields or not all(isinstance(x, str) and x.strip() for x in exclude_fields):
+                errors.append('S6-5 audit_log_scope.exclude_fields must be a non-empty string array')
 
         if escalation_doc.get('version') != 'v1' or autonomy_doc.get('version') != 'v1':
             errors.append('S6-6 fail-closed: contract version must be v1')
