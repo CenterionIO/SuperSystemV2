@@ -1,0 +1,25 @@
+{
+  "version": "v1",
+  "retention": {
+    "default_days": 30,
+    "by_artifact": {
+      "trace": 14,
+      "verification_artifact": 90,
+      "evidence": 30,
+      "manifest": 90
+    }
+  },
+  "redaction": {
+    "enabled": true,
+    "classes": ["pii", "secret", "token"],
+    "field_path_rules": [
+      {"path": "request.subject", "action": "mask"},
+      {"path": "evidence[].canonical_path", "action": "allow"}
+    ]
+  },
+  "audit": {
+    "immutable_events": ["verify_start", "verify_complete", "escalation_prompt", "escalation_response"],
+    "required_actor_fields": ["actor_id", "actor_role", "timestamp"],
+    "export_format": "jsonl"
+  }
+}

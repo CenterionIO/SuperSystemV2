@@ -19,6 +19,13 @@ from runtime.builder_adapter import simulate_build
 from runtime.orchestrator_api import runtime_create_run, runtime_get_run, runtime_step
 from runtime.planner_adapter import create_execution_plan
 from runtime.policy_engine import load_policy_bundle
+from runtime.stage6_ops import (
+    Stage6Error,
+    build_escalation_prompt,
+    gate_behavior,
+    status_view,
+    validate_escalation_response,
+)
 from runtime.proof_surface import ProofError, proof_evidence, proof_run
 from runtime.verification_backbone import VerificationBackbone
 
@@ -180,6 +187,49 @@ def cmd_proof_evidence(args: argparse.Namespace) -> int:
     return 0 if result.get('pass') else 1
 
 
+def cmd_stage6_status(args: argparse.Namespace) -> int:
+    try:
+        result = status_view(ROOT, Path(args.out))
+    except Stage6Error as exc:
+        print(json.dumps({'error': str(exc)}, indent=2))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_stage6_gate(args: argparse.Namespace) -> int:
+    try:
+        result = gate_behavior(ROOT, args.mode, args.gate)
+    except Stage6Error as exc:
+        print(json.dumps({'error': str(exc)}, indent=2))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_stage6_escalation_prompt(args: argparse.Namespace) -> int:
+    payload = _load_json(args.input)
+    try:
+        result = build_escalation_prompt(ROOT, payload, args.mode)
+    except Stage6Error as exc:
+        print(json.dumps({'error': str(exc)}, indent=2))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_stage6_escalation_validate(args: argparse.Namespace) -> int:
+    prompt = _load_json(args.prompt)
+    response = _load_json(args.response)
+    try:
+        result = validate_escalation_response(ROOT, prompt, response)
+    except Stage6Error as exc:
+        print(json.dumps({'error': str(exc)}, indent=2))
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog='supersystemv2')
     sub = p.add_subparsers(dest='cmd', required=True)
@@ -216,6 +266,24 @@ def build_parser() -> argparse.ArgumentParser:
     pevidence.add_argument('--out', required=True)
     pevidence.add_argument('--evidence_id', required=True)
     pevidence.set_defaults(func=cmd_proof_evidence)
+
+    s6 = sub.add_parser('stage6')
+    s6sub = s6.add_subparsers(dest='stage6_cmd', required=True)
+    s6status = s6sub.add_parser('status')
+    s6status.add_argument('--out', required=True)
+    s6status.set_defaults(func=cmd_stage6_status)
+    s6gate = s6sub.add_parser('gate')
+    s6gate.add_argument('--mode', required=True, choices=['approve_each', 'approve_final', 'full_auto'])
+    s6gate.add_argument('--gate', required=True, choices=['research_review', 'plan_review', 'build_review'])
+    s6gate.set_defaults(func=cmd_stage6_gate)
+    s6prompt = s6sub.add_parser('escalation-prompt')
+    s6prompt.add_argument('--mode', required=True, choices=['approve_each', 'approve_final', 'full_auto'])
+    s6prompt.add_argument('--input', required=True)
+    s6prompt.set_defaults(func=cmd_stage6_escalation_prompt)
+    s6validate = s6sub.add_parser('escalation-validate')
+    s6validate.add_argument('--prompt', required=True)
+    s6validate.add_argument('--response', required=True)
+    s6validate.set_defaults(func=cmd_stage6_escalation_validate)
 
     return p
 

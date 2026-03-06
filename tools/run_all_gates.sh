@@ -34,7 +34,13 @@ python3 "$ROOT/specs/task4/v1/validate_task4.py"
 echo "[10/11] Stage 5 execution and golden-path gates"
 python3 "$ROOT/specs/task5/v1/validate_task5.py"
 
-echo "[11/11] Stage 5 verification backbone smoke"
+echo "[11/13] Stage 5 verification backbone smoke"
 python3 "$ROOT/tools/runtime_verification_backbone_smoke.py"
 
-echo "All Stage 1-5 gates: PASS"
+echo "[12/13] Stage 6 contract gates"
+python3 "$ROOT/specs/task6/v1/validate-task6.py"
+
+echo "[13/13] Stage 7 runtime wiring gates"
+python3 "$ROOT/specs/task7/v1/validate-task7.py"
+
+echo "All Stage 1-7 gates: PASS"
