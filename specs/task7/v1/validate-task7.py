@@ -145,6 +145,18 @@ def main() -> int:
             'S8-2 versioning-migration-policy',
             errors,
         )
+        semver = versioning.get('semver_policy') if isinstance(versioning.get('semver_policy'), dict) else {}
+        _require_non_empty_array(semver.get('breaking_change_triggers'), 'S8-2 semver_policy.breaking_change_triggers', errors)
+        _require_non_empty_array(semver.get('minor_change_triggers'), 'S8-2 semver_policy.minor_change_triggers', errors)
+        _require_non_empty_array(semver.get('patch_change_triggers'), 'S8-2 semver_policy.patch_change_triggers', errors)
+
+        bc = versioning.get('backward_compat_window') if isinstance(versioning.get('backward_compat_window'), dict) else {}
+        if bc.get('unit') not in {'days', 'minor_versions'}:
+            errors.append('S8-2 backward_compat_window.unit must be days|minor_versions')
+        if not isinstance(bc.get('value'), int) or int(bc.get('value', 0)) <= 0:
+            errors.append('S8-2 backward_compat_window.value must be positive integer')
+        if not isinstance(bc.get('deprecation_notice_days'), int):
+            errors.append('S8-2 backward_compat_window.deprecation_notice_days must be integer')
 
         # b) replayability-spec.json
         replay = _load(replay_path)
@@ -152,9 +164,20 @@ def main() -> int:
             replay,
             {
                 'type': 'object',
-                'required': ['version', 'required_artifacts', 'replay_inputs', 'determinism_requirements'],
+                'required': [
+                    'version',
+                    'hash_algorithm',
+                    'timestamp_handling',
+                    'random_seed_policy',
+                    'required_artifacts',
+                    'replay_inputs',
+                    'determinism_requirements'
+                ],
                 'properties': {
                     'version': {'type': 'string'},
+                    'hash_algorithm': {'type': 'string'},
+                    'timestamp_handling': {'type': 'string'},
+                    'random_seed_policy': {'type': 'string'},
                     'required_artifacts': {'type': 'array', 'items': {'type': 'string'}},
                     'replay_inputs': {'type': 'object'},
                     'determinism_requirements': {'type': 'object'}
@@ -163,6 +186,20 @@ def main() -> int:
             },
             {},
             'S8-3 replayability-spec',
+            errors,
+        )
+        if replay.get('hash_algorithm') != 'sha256':
+            errors.append('S8-3 hash_algorithm must be sha256')
+        if replay.get('timestamp_handling') not in {'capture_not_replay', 'replay_from_trace'}:
+            errors.append('S8-3 timestamp_handling must be capture_not_replay|replay_from_trace')
+        if replay.get('random_seed_policy') not in {'not_used', 'fixed'}:
+            errors.append('S8-3 random_seed_policy must be not_used|fixed')
+        det_req = replay.get('determinism_requirements') if isinstance(replay.get('determinism_requirements'), dict) else {}
+        if det_req.get('stable_gate_outcomes_given_same_inputs') is not True:
+            errors.append('S8-3 determinism_requirements.stable_gate_outcomes_given_same_inputs must be true')
+        _require_non_empty_string(
+            det_req.get('stable_gate_outcomes_mechanism_notes'),
+            'S8-3 determinism_requirements.stable_gate_outcomes_mechanism_notes',
             errors,
         )
 
@@ -248,7 +285,15 @@ def main() -> int:
         )
         _enforce_no_additional_properties(
             replay,
-            {'version', 'required_artifacts', 'replay_inputs', 'determinism_requirements'},
+            {
+                'version',
+                'hash_algorithm',
+                'timestamp_handling',
+                'random_seed_policy',
+                'required_artifacts',
+                'replay_inputs',
+                'determinism_requirements'
+            },
             'S8-6 replayability-spec',
             errors,
         )
@@ -277,13 +322,13 @@ def main() -> int:
         # Nested strictness for core objects.
         _enforce_no_additional_properties(
             versioning.get('semver_policy'),
-            {'major', 'minor', 'patch'},
+            {'breaking_change_triggers', 'minor_change_triggers', 'patch_change_triggers'},
             'S8-6 versioning.semver_policy',
             errors,
         )
         _enforce_no_additional_properties(
             versioning.get('backward_compat_window'),
-            {'min_supported_minor_versions', 'deprecation_notice_days'},
+            {'unit', 'value', 'deprecation_notice_days'},
             'S8-6 versioning.backward_compat_window',
             errors,
         )
@@ -301,19 +346,26 @@ def main() -> int:
         )
         _enforce_no_additional_properties(
             replay.get('determinism_requirements'),
-            {'stable_evidence_ids', 'stable_artifact_paths', 'stable_gate_outcomes_given_same_inputs'},
+            {
+                'stable_evidence_ids',
+                'stable_artifact_paths',
+                'stable_gate_outcomes_given_same_inputs',
+                'stable_gate_outcomes_mechanism_notes'
+            },
             'S8-6 replayability.determinism_requirements',
             errors,
         )
 
         semver = versioning.get('semver_policy') if isinstance(versioning.get('semver_policy'), dict) else {}
-        _require_non_empty_string(semver.get('major'), 'S8-6 semver_policy.major', errors)
-        _require_non_empty_string(semver.get('minor'), 'S8-6 semver_policy.minor', errors)
-        _require_non_empty_string(semver.get('patch'), 'S8-6 semver_policy.patch', errors)
+        _require_non_empty_array(semver.get('breaking_change_triggers'), 'S8-6 semver_policy.breaking_change_triggers', errors)
+        _require_non_empty_array(semver.get('minor_change_triggers'), 'S8-6 semver_policy.minor_change_triggers', errors)
+        _require_non_empty_array(semver.get('patch_change_triggers'), 'S8-6 semver_policy.patch_change_triggers', errors)
 
         bc = versioning.get('backward_compat_window') if isinstance(versioning.get('backward_compat_window'), dict) else {}
-        if not isinstance(bc.get('min_supported_minor_versions'), int):
-            errors.append('S8-6 backward_compat_window.min_supported_minor_versions must be integer')
+        if bc.get('unit') not in {'days', 'minor_versions'}:
+            errors.append('S8-6 backward_compat_window.unit must be days|minor_versions')
+        if not isinstance(bc.get('value'), int):
+            errors.append('S8-6 backward_compat_window.value must be integer')
         if not isinstance(bc.get('deprecation_notice_days'), int):
             errors.append('S8-6 backward_compat_window.deprecation_notice_days must be integer')
 
@@ -328,11 +380,22 @@ def main() -> int:
         _require_non_empty_array(replay_inputs.get('required'), 'S8-6 replay_inputs.required', errors)
         if not isinstance(replay_inputs.get('optional'), list):
             errors.append('S8-6 replay_inputs.optional must be array')
+        if replay.get('hash_algorithm') != 'sha256':
+            errors.append('S8-6 hash_algorithm must be sha256')
+        if replay.get('timestamp_handling') not in {'capture_not_replay', 'replay_from_trace'}:
+            errors.append('S8-6 timestamp_handling must be capture_not_replay|replay_from_trace')
+        if replay.get('random_seed_policy') not in {'not_used', 'fixed'}:
+            errors.append('S8-6 random_seed_policy must be not_used|fixed')
 
         det = replay.get('determinism_requirements') if isinstance(replay.get('determinism_requirements'), dict) else {}
         for key in ('stable_evidence_ids', 'stable_artifact_paths', 'stable_gate_outcomes_given_same_inputs'):
             if not isinstance(det.get(key), bool):
                 errors.append(f'S8-6 determinism_requirements.{key} must be boolean')
+        _require_non_empty_string(
+            det.get('stable_gate_outcomes_mechanism_notes'),
+            'S8-6 determinism_requirements.stable_gate_outcomes_mechanism_notes',
+            errors,
+        )
 
     if errors:
         print('Stage 8 gates: FAIL')

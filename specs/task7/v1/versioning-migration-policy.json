@@ -1,12 +1,25 @@
 {
   "version": "v1",
   "semver_policy": {
-    "major": "breaking contract/schema/runtime behavior changes",
-    "minor": "backward-compatible feature additions",
-    "patch": "backward-compatible fixes"
+    "breaking_change_triggers": [
+      "schema_field_removal",
+      "required_field_addition",
+      "enum_value_removal",
+      "runtime_behavior_breaking_change"
+    ],
+    "minor_change_triggers": [
+      "optional_field_addition",
+      "enum_value_addition",
+      "new_nonbreaking_policy_rule"
+    ],
+    "patch_change_triggers": [
+      "bugfix_no_contract_change",
+      "documentation_or_metadata_update"
+    ]
   },
   "backward_compat_window": {
-    "min_supported_minor_versions": 2,
+    "unit": "days",
+    "value": 90,
     "deprecation_notice_days": 30
   },
   "migration_strategy": {
