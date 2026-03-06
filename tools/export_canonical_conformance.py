@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,11 @@ def _validate_bundle(bundle: dict[str, Any]) -> list[str]:
         errors.append('workflow_class must be non-empty string')
     if not isinstance(bundle.get('run_id'), str) or not bundle['run_id']:
         errors.append('run_id must be non-empty string')
+    else:
+        try:
+            uuid.UUID(bundle['run_id'])
+        except Exception:
+            errors.append('run_id must be UUID-formatted')
     artifacts = bundle.get('artifacts')
     if not isinstance(artifacts, dict):
         errors.append('artifacts must be object')
@@ -70,6 +76,12 @@ def _validate_bundle(bundle: dict[str, Any]) -> list[str]:
 
 def export_bundle(run_dir: Path) -> dict[str, Any]:
     run_id = run_dir.name
+    run_state_path = run_dir / 'run_state.json'
+    if run_state_path.exists():
+        run_state = json.loads(run_state_path.read_text())
+        corr = str(run_state.get('correlation_id', '')).strip()
+        if corr:
+            run_id = corr
 
     workflow_class = 'unknown'
     for probe in ('request.json', 'VerificationArtifact.json'):

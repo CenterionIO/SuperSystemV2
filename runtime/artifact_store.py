@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
@@ -15,6 +16,14 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: fh.read(65536), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _coerce_uuid(value: str) -> str:
+    try:
+        return str(uuid.UUID(str(value)))
+    except Exception:
+        # Deterministic UUID for non-UUID correlation IDs.
+        return str(uuid.uuid5(uuid.NAMESPACE_URL, str(value)))
 
 
 def persist_outputs(
@@ -29,6 +38,7 @@ def persist_outputs(
     request_snapshot: Dict[str, Any],
     evidence_rows: Iterable[Dict[str, Any]],
 ) -> Path:
+    correlation_uuid = _coerce_uuid(correlation_id)
     base = root_dir / "out" / correlation_id
     evidence_dir = base / "evidence"
     evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -58,7 +68,7 @@ def persist_outputs(
             break
     current_state = "complete" if str(verification_artifact.get("overall_status")) == "pass" else "blocked"
     run_state = {
-        "correlation_id": correlation_id,
+        "correlation_id": correlation_uuid,
         "current_state": current_state,
         "transitions": trace_cache,
         "last_transition_at": last_transition_at,

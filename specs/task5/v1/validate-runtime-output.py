@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -137,6 +138,19 @@ def _validate_run(run_name: str, out_dir: Path, errors: list[str]) -> None:
         errors.append(f'{run_name}: missing run_state.json')
     elif not run_state.is_file():
         errors.append(f'{run_name}: run_state.json exists but is not a file')
+    else:
+        try:
+            run_state_doc = _load(run_state)
+            corr = str(run_state_doc.get('correlation_id', '')).strip()
+            if not corr:
+                errors.append(f'{run_name}: run_state.json missing correlation_id')
+            else:
+                try:
+                    uuid.UUID(corr)
+                except Exception:
+                    errors.append(f'{run_name}: run_state.correlation_id must be UUID-formatted')
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f'{run_name}: failed to parse run_state.json: {exc}')
 
 
 def main() -> int:
@@ -188,6 +202,21 @@ def main() -> int:
             errors.append(f'{name}: bundle workflow_class missing')
         if not isinstance(bundle.get('run_id'), str) or not bundle['run_id']:
             errors.append(f'{name}: bundle run_id missing')
+        else:
+            try:
+                uuid.UUID(bundle['run_id'])
+            except Exception:
+                errors.append(f'{name}: bundle run_id must be UUID-formatted')
+
+        run_state_path = out_dir / 'run_state.json'
+        if run_state_path.exists():
+            try:
+                run_state_doc = _load(run_state_path)
+                corr = str(run_state_doc.get('correlation_id', '')).strip()
+                if corr and bundle.get('run_id') != corr:
+                    errors.append(f'{name}: bundle run_id must equal run_state.correlation_id')
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f'{name}: failed to parse run_state.json for bundle check: {exc}')
         artifacts = bundle.get('artifacts')
         if not isinstance(artifacts, dict):
             errors.append(f'{name}: bundle artifacts missing')
