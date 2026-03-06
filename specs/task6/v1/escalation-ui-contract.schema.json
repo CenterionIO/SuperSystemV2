@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EscalationUIContract",
+  "type": "object",
+  "required": ["version", "prompt", "response"],
+  "properties": {
+    "version": {"type": "string", "const": "v1"},
+    "prompt": {
+      "type": "object",
+      "required": ["required_fields", "severity_levels"],
+      "properties": {
+        "required_fields": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 5
+        },
+        "severity_levels": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+          "minItems": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "required": ["required_fields", "actions", "default_action"],
+      "properties": {
+        "required_fields": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 3
+        },
+        "actions": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["approve", "reject", "request_changes", "defer"]},
+          "minItems": 4
+        },
+        "default_action": {"type": "string", "enum": ["defer", "reject"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

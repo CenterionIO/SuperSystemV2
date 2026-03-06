@@ -1,0 +1,27 @@
+{
+  "version": "v1",
+  "prompt": {
+    "required_fields": [
+      "escalation_id",
+      "correlation_id",
+      "workflow_class",
+      "severity",
+      "reason",
+      "candidate_actions",
+      "requested_by",
+      "timestamp"
+    ],
+    "severity_levels": ["low", "medium", "high", "critical"]
+  },
+  "response": {
+    "required_fields": [
+      "escalation_id",
+      "selected_action",
+      "reviewer_id",
+      "rationale",
+      "timestamp"
+    ],
+    "actions": ["approve", "reject", "request_changes", "defer"],
+    "default_action": "defer"
+  }
+}

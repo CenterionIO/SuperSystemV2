@@ -1,0 +1,32 @@
+{
+  "version": "v1",
+  "modes": {
+    "approve_each": {
+      "gate_application": {
+        "research_review": "manual",
+        "plan_review": "manual",
+        "build_review": "manual"
+      },
+      "requires_user_approval": true,
+      "escalation_actions": ["approve", "reject", "request_changes", "defer"]
+    },
+    "approve_final": {
+      "gate_application": {
+        "research_review": "auto",
+        "plan_review": "auto",
+        "build_review": "manual"
+      },
+      "requires_user_approval": true,
+      "escalation_actions": ["approve", "reject", "request_changes", "defer"]
+    },
+    "full_auto": {
+      "gate_application": {
+        "research_review": "auto",
+        "plan_review": "auto",
+        "build_review": "auto"
+      },
+      "requires_user_approval": false,
+      "escalation_actions": ["defer", "reject"]
+    }
+  }
+}

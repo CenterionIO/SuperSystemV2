@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AutonomyModesPolicy",
+  "type": "object",
+  "required": ["version", "modes"],
+  "properties": {
+    "version": {"type": "string", "const": "v1"},
+    "modes": {
+      "type": "object",
+      "required": ["approve_each", "approve_final", "full_auto"],
+      "properties": {
+        "approve_each": {"$ref": "#/$defs/mode"},
+        "approve_final": {"$ref": "#/$defs/mode"},
+        "full_auto": {"$ref": "#/$defs/mode"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "mode": {
+      "type": "object",
+      "required": ["gate_application", "requires_user_approval", "escalation_actions"],
+      "properties": {
+        "gate_application": {
+          "type": "object",
+          "required": ["research_review", "plan_review", "build_review"],
+          "properties": {
+            "research_review": {"type": "string", "enum": ["auto", "manual"]},
+            "plan_review": {"type": "string", "enum": ["auto", "manual"]},
+            "build_review": {"type": "string", "enum": ["auto", "manual"]}
+          },
+          "additionalProperties": false
+        },
+        "requires_user_approval": {"type": "boolean"},
+        "escalation_actions": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["approve", "reject", "request_changes", "defer"]},
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
