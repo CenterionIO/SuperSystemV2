@@ -30,14 +30,13 @@ Scope: add reviewer-facing auditability surfaces and policy controls on top of S
   - `escalation-ui-contract.json` validates against schema.
 - `S6-3` Autonomy Policy Gate
   - `autonomy-modes-policy.json` validates against schema.
-- `S6-4` Security/Retention/Redaction Policy Gate
-  - `security-retention-redaction-policy.json` validates against schema.
-- `S6-5` Status View Contract Gate
+- `S6-4` Status View Contract Gate
   - `status-view-contract.json` accepts both running and blocked payload shapes.
-- `S6-6` Cross-Contract Consistency Gate
+- `S6-5` Security/Retention/Redaction Policy + Cross-Contract Consistency Gate
+  - `security-retention-redaction-policy.json` validates against schema.
   - Required autonomy modes exist and gate behavior is explicit.
   - Escalation response actions align with autonomy policy escalation actions.
-- `S6-7` CI Fail-Closed Gate
+- `S6-6` CI Fail-Closed Gate
   - Validator exits non-zero on any Stage 6 error.
 
 ## Exit Criteria

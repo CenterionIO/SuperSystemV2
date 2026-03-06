@@ -131,7 +131,7 @@ def main() -> int:
             secops_doc,
             secops_schema,
             secops_schema.get('$defs', {}),
-            'S6-4 security-retention-redaction-policy',
+            'S6-5 security-retention-redaction-policy',
             errors,
         )
         _validate_json_schema_subset(
@@ -172,22 +172,22 @@ def main() -> int:
         for mode in required_modes:
             mode_doc = (autonomy_doc.get('modes') or {}).get(mode)
             if not isinstance(mode_doc, dict):
-                errors.append(f'S6-6 missing autonomy mode: {mode}')
+                errors.append(f'S6-5 missing autonomy mode: {mode}')
                 continue
             gate = mode_doc.get('gate_application') or {}
             for review_gate in ('research_review', 'plan_review', 'build_review'):
                 if gate.get(review_gate) not in ('auto', 'manual'):
-                    errors.append(f'S6-6 {mode}.{review_gate} must be auto|manual')
+                    errors.append(f'S6-5 {mode}.{review_gate} must be auto|manual')
 
         ui_actions = set((escalation_doc.get('response') or {}).get('actions', []))
         for mode in required_modes:
             actions = ((autonomy_doc.get('modes') or {}).get(mode) or {}).get('escalation_actions', [])
             for action in actions:
                 if action not in ui_actions:
-                    errors.append(f'S6-6 action mismatch: {mode} references unknown escalation action {action}')
+                    errors.append(f'S6-5 action mismatch: {mode} references unknown escalation action {action}')
 
         if escalation_doc.get('version') != 'v1' or autonomy_doc.get('version') != 'v1':
-            errors.append('S6-7 fail-closed: contract version must be v1')
+            errors.append('S6-6 fail-closed: contract version must be v1')
 
     if errors:
         print('Stage 6 gates: FAIL')
@@ -199,10 +199,9 @@ def main() -> int:
     print('- S6-1: presence gate')
     print('- S6-2: escalation contract schema gate')
     print('- S6-3: autonomy policy schema gate')
-    print('- S6-4: security/retention/redaction policy schema gate')
-    print('- S6-5: status view contract gate')
-    print('- S6-6: cross-contract consistency gate')
-    print('- S6-7: CI fail-closed gate')
+    print('- S6-4: status view contract gate')
+    print('- S6-5: security/retention/redaction policy schema + cross-contract consistency gate')
+    print('- S6-6: CI fail-closed gate')
     return 0
 
 
