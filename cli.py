@@ -105,6 +105,8 @@ def _execute_workflow(req: dict) -> dict:
         'workflow_id': workflow_id,
         'workflow_class': workflow_class,
         'correlation_id': correlation_id,
+        'goal': req.get('goal', ''),
+        'requested_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
         'criteria': criteria,
         'execution_plan': plan,
         'build_report': build_report,
@@ -117,8 +119,17 @@ def _execute_workflow(req: dict) -> dict:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    req = _load_json(args.input) if args.input else {}
-    req.setdefault('workflow_class', args.workflow_class)
+    req_file = args.request_file or args.input
+    req = _load_json(req_file) if req_file else {}
+    if args.workflow_class:
+        req.setdefault('workflow_class', args.workflow_class)
+    if args.goal:
+        req.setdefault('goal', args.goal)
+    if args.correlation_id:
+        req.setdefault('correlation_id', args.correlation_id)
+    if not req.get('workflow_class'):
+        print('Error: workflow_class is required (--workflow_class or in request file)', file=sys.stderr)
+        return 1
 
     if req.get('events'):
         created = json.loads(runtime_create_run(json.dumps(req)))
@@ -243,8 +254,11 @@ def build_parser() -> argparse.ArgumentParser:
     vst5.set_defaults(func=cmd_validate_stage5)
 
     run = sub.add_parser('run')
-    run.add_argument('--workflow_class', required=True)
+    run.add_argument('--workflow_class')
+    run.add_argument('--goal', default='')
+    run.add_argument('--correlation_id', default='')
     run.add_argument('--input')
+    run.add_argument('--request', dest='request_file')
     run.add_argument('--out')
     run.set_defaults(func=cmd_run)
 
