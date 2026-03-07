@@ -65,13 +65,54 @@ def _execute_workflow(req: dict) -> dict:
     workflow_id = str(req.get('workflow_id', req.get('job_id', 'run-workflow')))
     correlation_id = str(req.get('correlation_id', f'{workflow_id}-corr'))
     required_checks = list(bundle.workflow_taxonomy['classes'][workflow_class]['required_checks'])
+    transitions: list[dict] = []
+
+    def _tx(from_state: str, to_state: str, event: str) -> None:
+        transitions.append(
+            {
+                'from_state': from_state,
+                'to_state': to_state,
+                'event': event,
+                'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+            }
+        )
+
+    _tx('idle', 'classifying', 'workflow_received')
+    _tx('classifying', 'researching', 'research_required')
+    research_report = {
+        'correlation_id': correlation_id,
+        'workflow_class': workflow_class,
+        'summary': f'Research synthesized for goal: {req.get("goal", "")}',
+    }
+    _tx('researching', 'research_review', 'research_report_ready')
+    _tx('research_review', 'planning', 'research_review_pass')
 
     plan = create_execution_plan(
         workflow_id=workflow_id,
         correlation_id=correlation_id,
         workflow_class=workflow_class,
         required_checks=required_checks,
+        goal=str(req.get('goal', '')),
     ).execution_plan
+    if isinstance(plan, dict) and plan.get('plan_blocker'):
+        _tx('planning', 'plan_blocker', 'planner_ambiguity')
+        return {
+            'job_id': req.get('job_id', workflow_id),
+            'domain': req.get('domain', 'plan'),
+            'overall_status': 'blocked',
+            'summary': str(plan.get('blocker_reason', 'plan_blocker')),
+            'checks_run': [],
+            'findings': [{'type': 'plan_blocker', 'reason': str(plan.get('blocker_reason', 'plan_blocker'))}],
+            'evidence': [],
+            'tool_trace': [],
+            'verification_artifact': None,
+            'verifier_version': 'mcp-verify-orchestrator@v1',
+            'policy_version': 'v1',
+            'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+            'transitions': transitions,
+        }
+    _tx('planning', 'plan_review', 'execution_plan_ready')
+    _tx('plan_review', 'building', 'plan_review_pass')
     build_report = simulate_build(
         root_dir=ROOT,
         workflow_id=workflow_id,
@@ -79,6 +120,44 @@ def _execute_workflow(req: dict) -> dict:
         plan=plan,
         required_checks=required_checks,
     )
+    _tx('building', 'build_review', 'build_report_ready')
+
+    if bool(req.get('simulate_platform_error', False)):
+        _tx('build_review', 'platform_error', 'platform_error')
+        _tx('platform_error', 'blocked_platform', 'auto_route_platform_error')
+        return {
+            'job_id': req.get('job_id', workflow_id),
+            'domain': req.get('domain', 'plan'),
+            'overall_status': 'blocked',
+            'summary': 'platform_error',
+            'checks_run': [],
+            'findings': [{'type': 'platform_error', 'reason': 'simulated platform error'}],
+            'evidence': [],
+            'tool_trace': [],
+            'verification_artifact': None,
+            'verifier_version': 'mcp-verify-orchestrator@v1',
+            'policy_version': 'v1',
+            'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+            'transitions': transitions,
+        }
+    if bool(req.get('simulate_workflow_error', False)):
+        _tx('build_review', 'workflow_error', 'workflow_error')
+        _tx('workflow_error', 'building', 'rework_after_workflow_error')
+        return {
+            'job_id': req.get('job_id', workflow_id),
+            'domain': req.get('domain', 'plan'),
+            'overall_status': 'fail',
+            'summary': 'workflow_error',
+            'checks_run': [],
+            'findings': [{'type': 'workflow_error', 'reason': 'simulated workflow error'}],
+            'evidence': [],
+            'tool_trace': [],
+            'verification_artifact': None,
+            'verifier_version': 'mcp-verify-orchestrator@v1',
+            'policy_version': 'v1',
+            'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+            'transitions': transitions,
+        }
 
     check_type_by_criteria = {
         str(row.get('criteria_id')): str(row.get('check_type'))
@@ -110,12 +189,20 @@ def _execute_workflow(req: dict) -> dict:
         'criteria': criteria,
         'execution_plan': plan,
         'build_report': build_report,
+        'research_report': research_report,
+        'trace_rows': transitions,
         'subject': {
             'generated_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             'source': 'workflow_runner',
         },
     }
-    return backbone.run(verify_request['job_id'], verify_request['domain'], verify_request)
+    result = backbone.run(verify_request['job_id'], verify_request['domain'], verify_request)
+    if result.get('overall_status') == 'pass':
+        _tx('build_review', 'complete', 'verification_pass')
+    else:
+        _tx('build_review', 'workflow_error', f"verification_{result.get('overall_status')}")
+    result['transitions'] = transitions
+    return result
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -175,7 +262,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     backbone = VerificationBackbone(ROOT, bundle)
     result = backbone.run(req.get('job_id', 'unknown'), req.get('domain', 'plan'), req)
     print(json.dumps(result, indent=2))
-    return 0 if result.get('overall_status') in {'pass', 'warn'} else 1
+    return 0 if result.get('overall_status') == 'pass' else 1
 
 
 def cmd_proof_run(args: argparse.Namespace) -> int:

@@ -378,6 +378,29 @@ class VerificationBackbone:
             "blocked": "Verification blocked: fail-closed conditions were triggered.",
         }
 
+        trace_rows = []
+        for row in request.get("trace_rows", []) if isinstance(request.get("trace_rows"), list) else []:
+            if isinstance(row, dict):
+                trace_rows.append(row)
+        trace_rows.extend(
+            [
+                {
+                    "event": "verify_start",
+                    "job_id": job_id,
+                    "domain": domain,
+                    "workflow_class": workflow_class,
+                    "timestamp": self._now_iso(),
+                },
+                {
+                    "event": "verify_complete",
+                    "job_id": job_id,
+                    "domain": domain,
+                    "overall_status": overall_status,
+                    "timestamp": self._now_iso(),
+                },
+            ]
+        )
+
         return {
             "_persisted_out_dir": str(
                 persist_outputs(
@@ -386,22 +409,7 @@ class VerificationBackbone:
                     execution_plan=request.get("execution_plan") if isinstance(request.get("execution_plan"), dict) else None,
                     build_report=request.get("build_report") or {"correlation_id": correlation_id, "status": overall_status},
                     verification_artifact=verification_artifact,
-                    trace_rows=[
-                        {
-                            "event": "verify_start",
-                            "job_id": job_id,
-                            "domain": domain,
-                            "workflow_class": workflow_class,
-                            "timestamp": self._now_iso(),
-                        },
-                        {
-                            "event": "verify_complete",
-                            "job_id": job_id,
-                            "domain": domain,
-                            "overall_status": overall_status,
-                            "timestamp": self._now_iso(),
-                        }
-                    ],
+                    trace_rows=trace_rows,
                     policy_snapshot={
                         "workflow_taxonomy_version": self.bundle.workflow_taxonomy.get("version"),
                         "routing_policy_version": self.bundle.routing_policy.get("version"),

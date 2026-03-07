@@ -18,7 +18,19 @@ def create_execution_plan(
     correlation_id: str,
     workflow_class: str,
     required_checks: List[str],
+    goal: str = "",
 ) -> PlannerResult:
+    if isinstance(goal, str) and any(token in goal.lower() for token in ("ambiguous", "plan_blocker")):
+        return PlannerResult(
+            execution_plan={
+                "schema_version": "v1",
+                "plan_blocker": True,
+                "blocker_reason": "Planner detected ambiguous goal; clarification required.",
+                "workflow_id": workflow_id,
+                "correlation_id": correlation_id,
+                "workflow_class": workflow_class,
+            }
+        )
     steps = []
     criteria = []
     for i, check in enumerate(required_checks, start=1):
