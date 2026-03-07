@@ -37,6 +37,7 @@ def persist_outputs(
     policy_snapshot: Dict[str, Any],
     request_snapshot: Dict[str, Any],
     evidence_rows: Iterable[Dict[str, Any]],
+    workflow_class: str = "",
 ) -> Path:
     correlation_uuid = _coerce_uuid(correlation_id)
     base = root_dir / "out" / correlation_id
@@ -102,10 +103,18 @@ def persist_outputs(
                 break
         if not linkage_resolved:
             break
+    va_status = str(verification_artifact.get("overall_status", ""))
+    checks_list = verification_artifact.get("checks", []) if isinstance(verification_artifact, dict) else []
     proof = {
-        "overall_status": str(verification_artifact.get("overall_status", "")),
-        "evidence_linkage_resolved": linkage_resolved,
+        "correlation_id": correlation_id,
+        "workflow_class": workflow_class,
+        "verdict": va_status,
+        "overall_status": va_status,
         "created_at": last_transition_at,
+        "evidence_count": len(evidence_cache),
+        "criteria_count": len(checks_list),
+        "all_evidence_resolved": linkage_resolved,
+        "evidence_linkage_resolved": linkage_resolved,
     }
     (base / "proof.json").write_text(json.dumps(proof, indent=2) + "\n")
 
@@ -127,6 +136,7 @@ def persist_outputs(
             continue
         artifacts.append(
             {
+                "file": str(Path(rel_path).name),
                 "path": rel_path,
                 "sha256": _sha256_file(path),
                 "size_bytes": int(path.stat().st_size),
@@ -135,7 +145,9 @@ def persist_outputs(
     manifest = {
         "schema_version": "v1",
         "correlation_id": correlation_id,
+        "workflow_class": workflow_class,
         "required_artifacts": required,
+        "created_at": last_transition_at,
         "artifacts": artifacts,
     }
     (base / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

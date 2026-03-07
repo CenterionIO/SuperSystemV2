@@ -364,8 +364,10 @@ class VerificationBackbone:
             "correlation_id": correlation_id,
             "verifier_version": "mcp-verify-orchestrator@v1",
             "checks": artifact_checks,
+            "criteria_results": artifact_checks,
             "overall_status": overall_status,
             "fail_closed": fail_closed,
+            "fail_closed_enforced": fail_closed,
             "blocker_reason": "required check blocked or missing" if fail_closed else "",
         }
 
@@ -408,6 +410,7 @@ class VerificationBackbone:
                     },
                     request_snapshot=request,
                     evidence_rows=evidence,
+                    workflow_class=workflow_class,
                 )
             ),
             "job_id": job_id,
