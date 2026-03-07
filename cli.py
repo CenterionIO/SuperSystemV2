@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from runtime.builder_adapter import simulate_build
+from runtime.artifact_store import persist_outputs
 from runtime.orchestrator_api import runtime_create_run, runtime_get_run, runtime_step
 from runtime.planner_adapter import create_execution_plan
 from runtime.policy_engine import load_policy_bundle
@@ -57,6 +58,156 @@ def _copy_run_output(persisted_out_dir: str | None, target_out: str | None) -> N
     shutil.copytree(src, dst)
 
 
+def _normalize_risk_tier(raw: str) -> str:
+    value = str(raw or '').strip().lower()
+    if value == 'medium':
+        return 'med'
+    return value
+
+
+def _autonomy_rank(mode: str) -> int:
+    ranks = {'approve_each': 0, 'approve_final': 1, 'full_auto': 2}
+    return int(ranks.get(str(mode), -1))
+
+
+def _emit_preflight_blocked(
+    req: dict,
+    bundle,
+    *,
+    workflow_id: str,
+    workflow_class: str,
+    correlation_id: str,
+    reason: str,
+    transitions: list[dict],
+    risk_tier: str,
+    autonomy_mode: str,
+) -> dict:
+    now = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+    verification_artifact = {
+        'verification_id': f'{workflow_id}-preflight',
+        'workflow_id': workflow_id,
+        'workflow_class': workflow_class,
+        'correlation_id': correlation_id,
+        'overall_status': 'blocked',
+        'checks': [
+            {
+                'check_id': 'preflight_policy_gate',
+                'check_type': 'policy_preflight',
+                'required': True,
+                'status': 'blocked',
+                'message': reason,
+                'evidence_refs': [],
+            }
+        ],
+        'status_summary': {'pass': 0, 'warn': 0, 'fail': 0, 'blocked': 1},
+        'created_at': now,
+        'blocked_reason': reason,
+        'risk_tier': risk_tier,
+        'autonomy_mode': autonomy_mode,
+    }
+    build_report = {
+        'build_id': f'{workflow_id}-preflight',
+        'workflow_id': workflow_id,
+        'workflow_class': workflow_class,
+        'correlation_id': correlation_id,
+        'status': 'blocked',
+        'criteria_results': [],
+        'evidence_records': [],
+        'blocked_reason': reason,
+        'created_at': now,
+    }
+    out_dir = persist_outputs(
+        ROOT,
+        correlation_id,
+        execution_plan=None,
+        build_report=build_report,
+        verification_artifact=verification_artifact,
+        trace_rows=transitions,
+        policy_snapshot={
+            'workflow_taxonomy_version': bundle.workflow_taxonomy.get('version'),
+            'routing_policy_version': bundle.routing_policy.get('version'),
+            'permissions_policy_version': bundle.permissions_policy.get('version'),
+            'override_policy_version': bundle.override_policy.get('version'),
+        },
+        request_snapshot=req,
+        evidence_rows=[],
+        workflow_class=workflow_class,
+    )
+    return {
+        '_persisted_out_dir': str(out_dir),
+        'job_id': req.get('job_id', workflow_id),
+        'domain': req.get('domain', 'plan'),
+        'overall_status': 'blocked',
+        'summary': reason,
+        'checks_run': [{'check_id': 'preflight_policy_gate', 'status': 'blocked', 'reason': reason}],
+        'findings': [{'type': 'preflight_policy_violation', 'reason': reason}],
+        'evidence': [],
+        'tool_trace': [],
+        'verification_artifact': verification_artifact,
+        'verifier_version': 'mcp-verify-orchestrator@v1',
+        'policy_version': 'v1',
+        'timestamp': now,
+        'transitions': transitions,
+    }
+
+
+def _preflight_policy(req: dict, bundle, *, workflow_class: str, normal_flow: list[str]) -> tuple[bool, str, str, str]:
+    class_cfg = (bundle.workflow_taxonomy.get('classes') or {}).get(workflow_class) or {}
+    risk_policy = _load_json(str(ROOT / 'specs' / 'task7' / 'v1' / 'risk-tiers-policy.json'))
+    autonomy_policy = _load_json(str(ROOT / 'specs' / 'task6' / 'v1' / 'autonomy-modes-policy.json'))
+
+    risk_tier = _normalize_risk_tier(str(req.get('risk_tier') or class_cfg.get('default_risk_tier') or ''))
+    tier_rules = risk_policy.get('tier_rules') or {}
+    tier_rule = tier_rules.get(risk_tier)
+    if not risk_tier or not isinstance(tier_rule, dict):
+        return False, f'Unknown or unsupported risk_tier for workflow_class {workflow_class}', risk_tier, str(req.get('autonomy_mode') or class_cfg.get('default_autonomy_mode') or '')
+
+    autonomy_mode = str(req.get('autonomy_mode') or class_cfg.get('default_autonomy_mode') or '')
+    modes = autonomy_policy.get('modes') or {}
+    if autonomy_mode not in modes:
+        return False, f'Unknown autonomy_mode: {autonomy_mode}', risk_tier, autonomy_mode
+
+    allowed = str(tier_rule.get('autonomy') or tier_rule.get('max_autonomy') or '')
+    if _autonomy_rank(autonomy_mode) < 0 or _autonomy_rank(allowed) < 0:
+        return False, f'Invalid autonomy ceiling for tier {risk_tier}', risk_tier, autonomy_mode
+    if _autonomy_rank(autonomy_mode) > _autonomy_rank(allowed):
+        return False, f'autonomy_mode {autonomy_mode} exceeds allowed ceiling {allowed} for tier {risk_tier}', risk_tier, autonomy_mode
+
+    flow_gates = {state for state in normal_flow if state.endswith('_review')}
+    for gate in tier_rule.get('required_gates', []) or []:
+        if gate not in flow_gates:
+            return False, f'required gate {gate} missing for workflow_class {workflow_class} at tier {risk_tier}', risk_tier, autonomy_mode
+
+    class_required_checks = class_cfg.get('required_checks') or []
+    if not class_required_checks:
+        return False, f'No required_checks configured for workflow_class {workflow_class}', risk_tier, autonomy_mode
+    requested_checks = req.get('required_checks')
+    if not isinstance(requested_checks, list):
+        requested_checks = req.get('requested_checks')
+    if isinstance(requested_checks, list):
+        requested = {str(c) for c in requested_checks}
+        missing = [str(c) for c in class_required_checks if str(c) not in requested]
+        if missing:
+            return False, f"required check(s) missing for preflight: {', '.join(missing)}", risk_tier, autonomy_mode
+
+    precedence = bundle.override_policy.get('precedence')
+    if not isinstance(precedence, list) or not precedence or precedence[0] != 'fail_closed_rules':
+        return False, 'override_policy precedence invalid or not fail-closed-first', risk_tier, autonomy_mode
+
+    if bool(req.get('council_override_requested', False)):
+        council = bundle.override_policy.get('council_override') or {}
+        if council.get('enabled') is not True:
+            return False, 'council override requested but policy disables council_override', risk_tier, autonomy_mode
+        required_artifacts = council.get('requires_artifacts') or []
+        provided = req.get('council_override_artifacts')
+        provided_set = {str(x) for x in provided} if isinstance(provided, list) else set()
+        missing_artifacts = [str(a) for a in required_artifacts if str(a) not in provided_set]
+        if missing_artifacts:
+            return False, f"council override artifacts missing: {', '.join(missing_artifacts)}", risk_tier, autonomy_mode
+
+    return True, '', risk_tier, autonomy_mode
+
+
 def _execute_workflow(req: dict) -> dict:
     bundle = load_policy_bundle(ROOT)
     backbone = VerificationBackbone(ROOT, bundle)
@@ -78,6 +229,23 @@ def _execute_workflow(req: dict) -> dict:
         )
 
     _tx('idle', 'classifying', 'workflow_received')
+    normal_flow = ['researching', 'research_review', 'planning', 'plan_review', 'building', 'build_review']
+    preflight_ok, preflight_reason, risk_tier, autonomy_mode = _preflight_policy(
+        req, bundle, workflow_class=workflow_class, normal_flow=normal_flow
+    )
+    if not preflight_ok:
+        _tx('classifying', 'blocked', 'preflight_blocked')
+        return _emit_preflight_blocked(
+            req,
+            bundle,
+            workflow_id=workflow_id,
+            workflow_class=workflow_class,
+            correlation_id=correlation_id,
+            reason=preflight_reason,
+            transitions=transitions,
+            risk_tier=risk_tier,
+            autonomy_mode=autonomy_mode,
+        )
     _tx('classifying', 'researching', 'research_required')
     research_report = {
         'correlation_id': correlation_id,
@@ -186,6 +354,8 @@ def _execute_workflow(req: dict) -> dict:
         'correlation_id': correlation_id,
         'goal': req.get('goal', ''),
         'requested_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+        'risk_tier': risk_tier,
+        'autonomy_mode': autonomy_mode,
         'criteria': criteria,
         'execution_plan': plan,
         'build_report': build_report,
