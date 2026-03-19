@@ -70,6 +70,9 @@ class RunState:
     is_terminal: bool = False
     last_heartbeat_at: str = ""
     heartbeat_missed: int = 0
+    skip_proof: bool = False
+    proof_skipped_at: Optional[str] = None
+    proof_skip_reason: str = ""
 
 
 @dataclass
@@ -256,6 +259,19 @@ class RuntimeStateMachine:
                 pass_state="completed",
                 fail_state=route["rework_routes"]["verification_fail"],
             )
+
+        if event == "skip_proof":
+            SKIP_PROOF_ELIGIBLE = {
+                "implementation", "verifying", "build_rework",
+                "blocked_evidence", "blocked",
+            }
+            if current not in SKIP_PROOF_ELIGIBLE:
+                return "blocked", f"skip_proof not allowed from state={current}"
+            reason = str(data.get("reason", "skip_proof requested"))
+            run.skip_proof = True
+            run.proof_skipped_at = _now_iso()
+            run.proof_skip_reason = reason
+            return "completed", f"proof skipped: {reason}"
 
         if current == "build_rework" and event == "build_patch_submitted":
             return "implementation", "build patch submitted"

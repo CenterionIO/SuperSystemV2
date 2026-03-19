@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Summary Verification Spec",
+  "version": "1.0.0",
+  "description": "Defines the mandatory structure of a verification summary emitted in lieu of live proof.",
+  "emit_before_completion": true,
+  "format": "markdown",
+  "fields": {
+    "acceptance_criteria": {
+      "required": true,
+      "description": "List of acceptance criteria with pass/fail/skipped status"
+    },
+    "files_changed": {
+      "required": true,
+      "description": "Concrete list of files created or modified"
+    },
+    "skip_reason": {
+      "required": true,
+      "description": "Why live proof was not performed"
+    },
+    "static_evidence": {
+      "required": false,
+      "description": "Static analysis results, lint output, or schema validation results"
+    },
+    "workflow_state_transitions": {
+      "required": true,
+      "description": "Forge workflow state transitions that occurred during execution"
+    }
+  },
+  "terminal_line": {
+    "format": "LIVE_PROOF: NOT_PERFORMED <reason>",
+    "must_be_last_non_empty_line": true
+  }
+}

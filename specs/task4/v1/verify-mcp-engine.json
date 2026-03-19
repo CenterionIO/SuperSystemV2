@@ -6,7 +6,8 @@
     "research_plan_alignment",
     "permissions_scope",
     "evidence_integrity",
-    "freshness"
+    "freshness",
+    "live_e2e"
   ],
   "scoring_algorithm": {
     "steps": [
@@ -23,7 +24,8 @@
     "rules": [
       "missing required check -> blocked",
       "plugin error/timeout -> blocked",
-      "warn on required check without exception artifact -> blocked"
+      "warn on required check without exception artifact -> blocked",
+      "pass requires at least one live_e2e check with status pass"
     ]
   },
   "overall_status_aggregation": {

@@ -1,0 +1,13 @@
+{
+  "name": "chatgpt-clone",
+  "version": "1.0.0",
+  "description": "Local ChatGPT-style UI powered by Claude",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}

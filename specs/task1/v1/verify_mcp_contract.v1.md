@@ -16,6 +16,7 @@ No additional runtime statuses are allowed.
 2. Required check returning `warn` is treated as `blocked` unless explicit policy exception exists.
 3. Any missing required check result is `blocked`.
 4. If required evidence is missing or unreadable, result is `blocked`.
+5. `overall_status=pass` is forbidden unless at least one real end-to-end live test check (`live_e2e`) passed.
 
 ## Required Check Types
 - `acceptance_criteria`
@@ -24,8 +25,11 @@ No additional runtime statuses are allowed.
 - `permissions_scope`
 - `evidence_integrity`
 - `freshness`
+- `live_e2e`
 
 `freshness` is mandatory for time-sensitive claims/workflow classes.
+
+`live_e2e` is mandatory for any final `pass` verdict (otherwise return `fail` or `blocked`).
 
 ## Input Contract (Conceptual)
 - correlation_id

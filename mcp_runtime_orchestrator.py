@@ -8,6 +8,7 @@ from runtime.orchestrator_api import (
     runtime_create_run as _runtime_create_run,
     runtime_get_run as _runtime_get_run,
     runtime_heartbeat as _runtime_heartbeat,
+    runtime_skip_proof as _runtime_skip_proof,
     runtime_step as _runtime_step,
     runtime_tail_transitions as _runtime_tail_transitions,
 )
@@ -33,6 +34,11 @@ def runtime_get_run(request_json: str) -> str:
 @server.tool()
 def runtime_tail_transitions(request_json: str) -> str:
     return _runtime_tail_transitions(request_json)
+
+
+@server.tool()
+def runtime_skip_proof(request_json: str) -> str:
+    return _runtime_skip_proof(request_json)
 
 
 @server.tool()

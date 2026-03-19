@@ -11,6 +11,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 from mcp.server.fastmcp import FastMCP
 from mcp_file_checker import file_exists as _file_exists
@@ -38,6 +39,8 @@ _POLICY_BUNDLE = _load_policy_bundle(Path(__file__).resolve().parent)
 _VERIFY_ROLE = "VerifyMCP"
 _SPEC_BUNDLE = _load_runtime_spec_bundle(Path(__file__).resolve().parent)
 _VERIFICATION_BACKBONE = VerificationBackbone(Path(__file__).resolve().parent, _POLICY_BUNDLE)
+_HUB_URL = "http://127.0.0.1:9777"
+_SUPERVISOR_CHANNEL = "supervisor-events"
 
 
 def _now_iso() -> str:
@@ -58,6 +61,36 @@ def _blocked_result(job_id: str, domain: str, reason: str) -> dict:
         "policy_version": "v1",
         "timestamp": _now_iso(),
     }
+
+
+def _emit_supervisor_verification_event(job_id: str, domain: str, response: dict) -> None:
+    try:
+        payload = {
+            "event_type": "verification_result",
+            "workflow_id": str(job_id),
+            "domain": domain,
+            "status": str(response.get("overall_status", "blocked")),
+            "summary": str(response.get("summary", ""))[:500],
+            "timestamp": _now_iso(),
+        }
+        body = json.dumps(
+            {
+                "channel": _SUPERVISOR_CHANNEL,
+                "sender": "verify-mcp",
+                "content": json.dumps(payload),
+            }
+        ).encode("utf-8")
+        req = Request(
+            f"{_HUB_URL}/messages",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        with urlopen(req, timeout=3):
+            pass
+    except Exception:
+        # Best-effort telemetry; never break verification execution.
+        pass
 
 
 def _truth_v1(job_id: str, request: dict) -> dict:
@@ -502,6 +535,7 @@ def verify_run(request_json: str) -> str:
                 "policy_version": "v1",
                 "timestamp": _now_iso(),
             }
+        _emit_supervisor_verification_event(str(job_id), "truth", response)
         return json.dumps(response, indent=2)
 
     # Stage 5: use verification backbone for non-truth domains.
@@ -522,6 +556,7 @@ def verify_run(request_json: str) -> str:
             "policy_version": "v1",
             "timestamp": _now_iso(),
         }
+    _emit_supervisor_verification_event(str(job_id), str(domain), response)
     return json.dumps(response, indent=2)
 
 

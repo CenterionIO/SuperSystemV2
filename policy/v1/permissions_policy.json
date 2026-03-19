@@ -21,7 +21,8 @@
         "runtime.step",
         "runtime.get_run",
         "runtime.tail_transitions",
-        "runtime.heartbeat"
+        "runtime.heartbeat",
+        "runtime.skip_proof"
       ],
       "denied_tools": ["planner.author_plan", "builder.execute_direct"],
       "path_scope": {"read": ["/Users/ai/SuperSystemV2"], "write": ["/Users/ai/SuperSystemV2/runtime/state"]},

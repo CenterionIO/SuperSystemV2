@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "No-Live-Proof Policy",
+  "version": "1.0.0",
+  "description": "Defines when live runtime validation may be skipped and what compensating controls are required.",
+  "allowed_conditions": [
+    "environment_not_available",
+    "policy_explicit_waiver",
+    "runtime_cost_exceeds_threshold",
+    "static_analysis_sufficient",
+    "task_explicitly_requests_skip"
+  ],
+  "compensating_controls": [
+    "emit_verification_summary",
+    "record_skip_reason",
+    "link_to_static_evidence",
+    "approval_by_orchestrator_or_builder_role"
+  ],
+  "summary_required": true,
+  "summary_format": "summary-verification-spec.json",
+  "live_proof_contract_line": "LIVE_PROOF: NOT_PERFORMED <reason>",
+  "enforcement": "builder must emit exactly one LIVE_PROOF line at end of output"
+}

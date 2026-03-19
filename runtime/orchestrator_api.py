@@ -102,6 +102,44 @@ def runtime_tail_transitions(request_json: str) -> str:
         return _error(str(exc))
 
 
+def runtime_skip_proof(request_json: str) -> str:
+    """Skip the verification/proof phase for a run and advance it to completed.
+
+    Request fields:
+        run_id  (str, required)  — the run to skip proof on
+        reason  (str, optional)  — human-readable justification; defaults to
+                                   "skip_proof requested"
+
+    The run must be in an eligible state (implementation, verifying,
+    build_rework, blocked_evidence, blocked).  The transition is recorded in
+    the audit log with ``event=skip_proof`` and the run's ``skip_proof``,
+    ``proof_skipped_at``, and ``proof_skip_reason`` fields are populated.
+    """
+    try:
+        _ensure_tool_allowed(_POLICY_BUNDLE, _ROLE, "runtime.skip_proof")
+        request = _parse_json("request_json", request_json)
+        run_id = str(request.get("run_id", "")).strip()
+        reason = str(request.get("reason", "")).strip() or "skip_proof requested"
+        if not run_id:
+            return _error("run_id is required")
+        run = _SM.load_run(run_id)
+        transition = _SM.step(run, "skip_proof", reason=reason)
+        run = _SM.load_run(run_id)
+        return json.dumps(
+            {
+                "status": "pass",
+                "skip_proof": True,
+                "proof_skipped_at": run.proof_skipped_at,
+                "proof_skip_reason": run.proof_skip_reason,
+                "transition": asdict(transition),
+                "run": asdict(run),
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        return _error(str(exc))
+
+
 def runtime_heartbeat(request_json: str) -> str:
     try:
         _ensure_tool_allowed(_POLICY_BUNDLE, _ROLE, "runtime.heartbeat")

@@ -355,6 +355,40 @@ class VerificationBackbone:
             )
 
         overall_status = self._aggregate_status([c["status"] for c in checks_run] or ["blocked"])
+
+        has_live_e2e_pass = any(
+            c.get("check_type") == "live_e2e" and c.get("status") == "pass"
+            for c in artifact_checks
+        )
+        if overall_status == "pass" and not has_live_e2e_pass:
+            overall_status = "blocked"
+            checks_run.append(
+                {
+                    "check_id": "live_e2e_required",
+                    "status": "blocked",
+                    "reason": "PASS forbidden: no live_e2e check with status=pass",
+                }
+            )
+            artifact_checks.append(
+                {
+                    "check_id": "live_e2e_required",
+                    "check_type": "live_e2e",
+                    "required": True,
+                    "status": "blocked",
+                    "message": "PASS forbidden without at least one real end-to-end live test",
+                    "evidence_refs": [],
+                }
+            )
+            findings.append(
+                {
+                    "severity": "high",
+                    "type": "missing_live_e2e",
+                    "claim": "live_e2e",
+                    "reason": "Verification cannot return pass without at least one real end-to-end live test.",
+                    "evidence_refs": [],
+                }
+            )
+
         fail_closed = overall_status == "blocked"
 
         verification_artifact = {

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mcp-workflow-observer": {
+      "command": "/Users/ai/SuperSystemV2/.venv/bin/python",
+      "args": ["/Users/ai/SuperSystemV2/mcp_workflow_observer.py"],
+      "env": {}
+    }
+  }
+}
